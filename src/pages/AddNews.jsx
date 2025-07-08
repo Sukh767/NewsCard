@@ -1,0 +1,268 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Save, X } from 'lucide-react';
+import AdminSidebar from '../components/AdminSidebar';
+import { newsAPI } from '../utils/api';
+
+const AddNews = () => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    content: '',
+    category: 'Technology',
+    imageUrl: '',
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const categories = ['Technology', 'Sports', 'Politics', 'Entertainment', 'Health', 'Business'];
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData(prev => ({ ...prev, imageUrl: url }));
+    if (url) {
+      setImagePreview(url);
+      setImageFile(null);
+    }
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const submitData = new FormData();
+      submitData.append('title', formData.title);
+      submitData.append('description', formData.description);
+      submitData.append('content', formData.content);
+      submitData.append('category', formData.category);
+      
+      if (imageFile) {
+        submitData.append('image', imageFile);
+      } else if (formData.imageUrl) {
+        submitData.append('imageUrl', formData.imageUrl);
+      }
+
+      await newsAPI.createArticle(submitData);
+      navigate('/admin');
+    } catch (err) {
+      setError('Failed to create article. Please try again.');
+      console.error('Error creating article:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <AdminSidebar />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 transition-colors duration-300">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white animate-fadeInLeft">Add New Article</h1>
+          <p className="text-gray-600 dark:text-gray-300 animate-fadeInLeft animation-delay-200">Create a new news article for your site.</p>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-colors duration-300 animate-fadeInUp">
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4 mb-6 animate-shake">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  {/* Title */}
+                  <div className="animate-fadeInUp animation-delay-200">
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Article Title *
+                    </label>
+                    <input
+                      type="text"
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                      placeholder="Enter article title"
+                      required
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div className="animate-fadeInUp animation-delay-400">
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category *
+                    </label>
+                    <select
+                      id="category"
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                      required
+                    >
+                      {categories.map(category => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Description */}
+                  <div className="animate-fadeInUp animation-delay-600">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Short Description *
+                    </label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                      placeholder="Enter a brief description of the article"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-6">
+                  {/* Image Upload */}
+                  <div className="animate-fadeInUp animation-delay-800">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Article Image
+                    </label>
+                    
+                    {/* Image Preview */}
+                    {imagePreview && (
+                      <div className="mb-4 relative">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-48 object-cover rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={clearImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-all duration-300 transform hover:scale-110"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* File Upload */}
+                    <div className="mb-4">
+                      <label htmlFor="image" className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Upload Image File
+                      </label>
+                      <input
+                        type="file"
+                        id="image"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                      />
+                    </div>
+
+                    {/* Or URL */}
+                    <div>
+                      <label htmlFor="imageUrl" className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Or Enter Image URL
+                      </label>
+                      <input
+                        type="url"
+                        id="imageUrl"
+                        name="imageUrl"
+                        value={formData.imageUrl}
+                        onChange={handleImageUrlChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="mt-6 animate-fadeInUp animation-delay-1000">
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Article Content *
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleInputChange}
+                  rows={12}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                  placeholder="Write your article content here..."
+                  required
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="mt-6 flex justify-end space-x-4 animate-fadeInUp animation-delay-1200">
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-105"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center space-x-2 transform hover:scale-105"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>{loading ? 'Publishing...' : 'Publish Article'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AddNews;
