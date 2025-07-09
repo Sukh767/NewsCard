@@ -1,44 +1,43 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
+import newsRoutes from './routes/newsRoute.js';
+import userRoutes from './routes/userRoutes.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create uploads directory if it doesn't exist
+// Uploads directory
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve static files from uploads directory
+// Serve static files
 app.use('/uploads', express.static(uploadsDir));
 
-// Multer configuration for file uploads
+// Multer configuration
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
+export const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -49,33 +48,15 @@ const upload = multer({
   }
 });
 
-// MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/newshub';
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB');
-}).catch((error) => {
-  console.error('MongoDB connection error:', error);
-});
-
-// Import routes
-const newsRoutes = require('./routes/newsRoute');
-const userRoutes = require('./routes/userRoute');
-
-// Use routes
+// Routes
 app.use('/api/news', newsRoutes);
 app.use('/api/auth', userRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes); // optional, if separated
 
-// Error handling middleware
+// Error middleware
 app.use((error, req, res, next) => {
-  console.error(error);
+  console.error('Error caught in index.js:', error.message);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default app;
