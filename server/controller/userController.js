@@ -1,15 +1,14 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const auth = require('../middleware/auth');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import dotenv from 'dotenv';
+dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET;
 
-const router = express.Router();
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
-
-// POST /api/users/register - User registration
-router.post('/register', async (req, res) => {
+// @desc    User registration
+// @route   POST /api/users/register
+// @access  Public
+const registerUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -17,7 +16,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { username }]
     });
@@ -26,7 +24,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Username or email already exists' });
     }
 
-    // Create new user
     const user = new User({
       username,
       email,
@@ -36,7 +33,6 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
       JWT_SECRET,
@@ -56,10 +52,13 @@ router.post('/register', async (req, res) => {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
   }
-});
+};
 
-// POST /api/users/login - User login
-router.post('/login', async (req, res) => {
+// @desc    User login
+// @route   POST /api/users/login
+// @access  Private
+
+const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -67,7 +66,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Check for admin credentials first
+    // Admin shortcut login
     if (username === 'admin' && password === 'admin123') {
       const token = jwt.sign(
         { userId: 'admin', username: 'admin', role: 'admin' },
@@ -86,19 +85,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user in database
+    // Find user in DB
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await user.comparePassword(password); // Must be defined in your User model
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT token
+    // Create token
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
       JWT_SECRET,
@@ -118,12 +116,16 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
   }
-});
+};
 
-// GET /api/users/profile - Get user profile
-router.get('/profile', auth, async (req, res) => {
+
+
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
+const getUserProfile = async (req, res) => {
   try {
-    // Handle admin user
+    // Handle admin user separately
     if (req.user.userId === 'admin') {
       return res.json({
         _id: 'admin',
@@ -133,8 +135,8 @@ router.get('/profile', auth, async (req, res) => {
       });
     }
 
-    // Find regular user
     const user = await User.findById(req.user.userId).select('-password');
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -144,10 +146,12 @@ router.get('/profile', auth, async (req, res) => {
     console.error('Profile error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
-});
+};
 
-// GET /api/users - Get all users (admin only)
-router.get('/', auth, async (req, res) => {
+// @desc    Get all users (admin only)
+// @route   GET /api/users
+// @access  Private/Admin
+const getAllUsers = async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
@@ -159,6 +163,7 @@ router.get('/', auth, async (req, res) => {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
-});
+};
 
-module.exports = router;
+
+export { registerUser, loginUser, getUserProfile, getAllUsers };

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const newsSchema = new mongoose.Schema({
   title: {
@@ -34,10 +34,11 @@ const newsSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
-newsSchema.pre('save', function(next) {
+// Automatically update `updatedAt` on save
+newsSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
-module.exports = mongoose.model('News', newsSchema);
+const News = mongoose.model('News', newsSchema);
+export default News;
