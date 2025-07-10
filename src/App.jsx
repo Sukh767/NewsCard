@@ -10,6 +10,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import AddNews from './pages/AddNews';
 import EditNews from './pages/EditNews';
 import NotFound from './pages/NotFound';
+import { Toaster } from 'react-hot-toast';
+
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -24,6 +26,7 @@ const ProtectedRoute = ({ children }) => {
 const App = () => {
   return (
     <ThemeProvider>
+      <Toaster position="top-right" reverseOrder={false} />
       <AuthProvider>
         <Router>
           <Routes>
