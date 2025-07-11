@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth.js'
-import { getAllUsers, getUserProfile, loginUser, registerUser } from '../controller/userController.js';
+import { getAllUsers, getUserProfile, loginUser, logoutUser, registerUser } from '../controller/userController.js';
 
 
 
@@ -15,6 +15,11 @@ router.post('/register', registerUser);
 // @desc    Login user or admin
 // @access  Public
 router.post('/login', loginUser);
+
+// @route   POST /api/users/logout
+// @desc    Logout user (clear token)
+// @access  Private
+router.post('/logout', auth, logoutUser);
 
 // @route   GET /api/users/profile
 // @desc    Get logged-in user's profile

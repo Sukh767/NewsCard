@@ -1,18 +1,23 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
 import dotenv from 'dotenv';
+import User from '../models/User.js';
+
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+
+// 🔐 Utility: Generate JWT
+const generateToken = (payload) =>
+  jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 
 
-// @desc    User registration
+// @desc    Register new user
 // @route   POST /api/users/register
 // @access  Public
 const registerUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username?.trim() || !email?.trim() || !password?.trim()) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -21,58 +26,48 @@ const registerUser = async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'Username or email already exists' });
+      return res.status(409).json({ error: 'Username or email already exists' });
     }
 
-    const user = new User({
-      username,
-      email,
-      password,
-      role: 'user'
+    const newUser = new User({ username, email, password });
+    await newUser.save();
+
+    const token = generateToken({
+      userId: newUser._id,
+      username: newUser.username,
+      role: newUser.role
     });
-
-    await user.save();
-
-    const token = jwt.sign(
-      { userId: user._id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
 
     res.status(201).json({
       token,
       user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
+        _id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Registration error:', error.message);
     res.status(500).json({ error: 'Registration failed' });
   }
 };
 
-// @desc    User login
-// @route   POST /api/users/login
-// @access  Private
 
+// @desc    User login (admin or user)
+// @route   POST /api/users/login
+// @access  Public
 const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
+    if (!username?.trim() || !password?.trim()) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
     // Admin shortcut login
     if (username === 'admin' && password === 'admin123') {
-      const token = jwt.sign(
-        { userId: 'admin', username: 'admin', role: 'admin' },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      const token = generateToken({ userId: 'admin', username: 'admin', role: 'admin' });
 
       return res.json({
         token,
@@ -85,23 +80,21 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Find user in DB
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const isPasswordValid = await user.comparePassword(password); // Must be defined in your User model
-    if (!isPasswordValid) {
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Create token
-    const token = jwt.sign(
-      { userId: user._id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = generateToken({
+      userId: user._id,
+      username: user.username,
+      role: user.role
+    });
 
     res.json({
       token,
@@ -113,19 +106,17 @@ const loginUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error:', error.message);
     res.status(500).json({ error: 'Login failed' });
   }
 };
 
 
-
-// @desc    Get user profile
+// @desc    Get logged-in user's profile
 // @route   GET /api/users/profile
 // @access  Private
 const getUserProfile = async (req, res) => {
   try {
-    // Handle admin user separately
     if (req.user.userId === 'admin') {
       return res.json({
         _id: 'admin',
@@ -143,8 +134,22 @@ const getUserProfile = async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    console.error('Profile error:', error);
+    console.error('Profile fetch error:', error.message);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/users/logout
+// @access  Private
+const logoutUser = async (req, res) => {
+  try {
+    // Invalidate token logic (if implemented with Redis/DB)
+    // For now, just inform client to delete token
+    res.status(200).json({ message: 'Logout successful. Please clear the token on client side.' });
+  } catch (error) {
+    console.error('Logout error:', error.message);
+    res.status(500).json({ error: 'Logout failed' });
   }
 };
 
@@ -154,16 +159,23 @@ const getUserProfile = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({ error: 'Access denied: Admin only' });
     }
 
     const users = await User.find().select('-password').sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error fetching users:', error.message);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 };
 
 
-export { registerUser, loginUser, getUserProfile, getAllUsers };
+
+export {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  logoutUser,
+  getAllUsers
+};
