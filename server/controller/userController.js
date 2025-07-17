@@ -71,6 +71,7 @@ const loginUser = async (req, res) => {
 
       return res.json({
         token,
+        message: "Login Success",
         user: {
           _id: 'admin',
           username: 'admin',
@@ -98,6 +99,7 @@ const loginUser = async (req, res) => {
 
     res.json({
       token,
+      message: "Login Success",
       user: {
         _id: user._id,
         username: user.username,
