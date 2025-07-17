@@ -68,6 +68,7 @@ const getSingleNews = async (req, res) => {
 
 const createNews = async (req, res) => {
   try {
+    console.log(req.user)
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied. Admin only.' });
     }
