@@ -19,6 +19,7 @@ const Login = () => {
 
     try {
       const success = await login(username, password);
+      console.log(success)
       if (success) {
         navigate('/');
       } else {

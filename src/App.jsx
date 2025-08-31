@@ -11,6 +11,7 @@ import AddNews from './pages/AddNews';
 import EditNews from './pages/EditNews';
 import NotFound from './pages/NotFound';
 import { Toaster } from 'react-hot-toast';
+import { Profile } from './components/Profile';
 
 
 const ProtectedRoute = ({ children }) => {
@@ -66,6 +67,15 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

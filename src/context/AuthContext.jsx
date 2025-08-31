@@ -17,11 +17,21 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const storedUser = localStorage.getItem('user');
+
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser)); // restore user from localStorage
+      setLoading(false);
+    } else if (token) {
+      // fallback: fetch profile if only token exists
       authAPI.getProfile()
-        .then(setUser)
+        .then((profile) => {
+          setUser(profile);
+          localStorage.setItem('user', JSON.stringify(profile));
+        })
         .catch(() => {
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
         })
         .finally(() => setLoading(false));
     } else {
@@ -32,7 +42,11 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await authAPI.login(username, password);
+      console.log(response);
+
       localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+
       setUser(response.user);
       return true;
     } catch (error) {
@@ -43,7 +57,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, email, password) => {
     try {
       const response = await authAPI.register(username, email, password);
+
       localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+
       setUser(response.user);
       return true;
     } catch (error) {
@@ -53,6 +70,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 

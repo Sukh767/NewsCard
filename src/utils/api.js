@@ -7,13 +7,32 @@ const api = axios.create({
 });
 
 // Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add auth token to requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Handle response errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const newsAPI = {
   // Get all news articles
@@ -60,19 +79,27 @@ export const newsAPI = {
 
 export const authAPI = {
   login: async (username, password) => {
-    const response = await api.post('/auth/login', { username, password });
+    const response = await api.post('/users/login', { username, password });
     return response.data;
   },
 
   register: async (username, email, password) => {
-    const response = await api.post('/auth/register', { username, email, password });
+    const response = await api.post('/users/register', { username, email, password });
     return response.data;
   },
 
   getProfile: async () => {
-    const response = await api.get('/auth/profile');
+    const response = await api.get('/users/profile');
     return response.data;
   },
+  // Update profile
+  updateProfile: async (formData) => {
+  const response = await api.put('/users/update', formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+},
+
 };
 
 export default api;

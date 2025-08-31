@@ -1,10 +1,15 @@
 import express from 'express';
 import auth from '../middleware/auth.js'
-import { getAllUsers, getUserProfile, loginUser, logoutUser, registerUser } from '../controller/userController.js';
-
+import { getAllUsers, getUserProfile, loginUser, logoutUser, registerUser, updateProfile } from '../controller/userController.js';
+import { upload } from '../config/multerConfig.js';
 
 
 const router = express.Router();
+
+// @route   POST /api/users/profile
+// @desc    Update user details
+// @access  Private
+router.put('/update', auth, upload.single('avatar'), updateProfile);
 
 // @route   POST /api/users/register
 // @desc    Register a new user

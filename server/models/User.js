@@ -34,6 +34,20 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number']
   },
+  avatar: {
+    type: String, 
+    default: null
+  },
+  firstName: {
+    type: String,
+    trim: true,
+    default: ''  
+  },
+  lastName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   role: {
     type: String,
     enum: ['admin', 'user'],
