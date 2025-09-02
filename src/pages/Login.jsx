@@ -236,8 +236,8 @@ const Login = () => {
               </h3>
             </div>
             <div className="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
-              <p><span className="font-medium">Username:</span> <code className="bg-yellow-100 dark:bg-yellow-800/30 px-2 py-1 rounded">tonystark</code></p>
-              <p><span className="font-medium">Password:</span> <code className="bg-yellow-100 dark:bg-yellow-800/30 px-2 py-1 rounded">Tony@123</code></p>
+              <p><span className="font-medium">Username:</span> <code className="bg-yellow-100 dark:bg-yellow-800/30 px-2 py-1 rounded">blackhat</code></p>
+              <p><span className="font-medium">Password:</span> <code className="bg-yellow-100 dark:bg-yellow-800/30 px-2 py-1 rounded">Black123@</code></p>
             </div>
           </div>
         </div>
