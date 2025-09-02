@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authAPI } from "../utils/api";
-import { Home, User, Mail, UserCheck, Save, Camera, Edit } from "lucide-react";
+import { Home, User, Mail, UserCheck, Save, Camera, Edit, Lock, Eye, EyeOff } from "lucide-react";
 
 export const Profile = () => {
   const [formData, setFormData] = useState({
@@ -11,12 +11,44 @@ export const Profile = () => {
     email: "",
     username: "",
     avatar: null,
+    password: "",
+    confirmPassword: ""
   });
 
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
   const [originalData, setOriginalData] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
+  const userId = JSON.parse(localStorage.getItem('user'))?._id;
+
+  // Password validation regex
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?#&])[A-Za-z\d@$!%*?#&]{8,}$/;
+
+  // Validate password
+  const validatePassword = (password) => {
+    const errors = [];
+    
+    if (password.length < 8) {
+      errors.push("Password must be at least 8 characters long");
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      errors.push("Password must contain at least one lowercase letter");
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      errors.push("Password must contain at least one uppercase letter");
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      errors.push("Password must contain at least one digit");
+    }
+    if (!/(?=.*[@$!%*?#&])/.test(password)) {
+      errors.push("Password must contain at least one special character (@$!%*?#&)");
+    }
+    
+    return errors;
+  };
 
   // Fetch profile details
   useEffect(() => {
@@ -24,7 +56,6 @@ export const Profile = () => {
       try {
         setLoading(true);
         const profile = await authAPI.getProfile();
-        console.log("Fetched profile:", profile);
         
         const profileData = {
           firstName: profile.firstName || "",
@@ -32,6 +63,8 @@ export const Profile = () => {
           email: profile.email || "",
           username: profile.username || "",
           avatar: null,
+          password: "",
+          confirmPassword: ""
         };
         
         setFormData(profileData);
@@ -57,6 +90,31 @@ export const Profile = () => {
   // Handle input change
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === "password") {
+      const errors = validatePassword(value);
+      setPasswordErrors(errors);
+      
+      // Check if confirm password matches
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        if (!passwordErrors.includes("Passwords do not match")) {
+          setPasswordErrors(prev => [...prev, "Passwords do not match"]);
+        }
+      } else {
+        setPasswordErrors(prev => prev.filter(error => error !== "Passwords do not match"));
+      }
+    }
+    
+    if (name === "confirmPassword" && formData.password) {
+      if (value !== formData.password) {
+        if (!passwordErrors.includes("Passwords do not match")) {
+          setPasswordErrors(prev => [...prev, "Passwords do not match"]);
+        }
+      } else {
+        setPasswordErrors(prev => prev.filter(error => error !== "Passwords do not match"));
+      }
+    }
+    
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -85,6 +143,23 @@ export const Profile = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
 
+    // Validate passwords if they are being changed
+    if (formData.password) {
+      const errors = validatePassword(formData.password);
+      
+      if (errors.length > 0) {
+        setPasswordErrors(errors);
+        toast.error("Please fix password validation errors");
+        return;
+      }
+      
+      if (formData.password !== formData.confirmPassword) {
+        setPasswordErrors(["Passwords do not match"]);
+        toast.error("Passwords do not match");
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -102,6 +177,10 @@ export const Profile = () => {
       }
       if (formData.avatar) {
         data.append("avatar", formData.avatar);
+      }
+      // Only append password if it's been changed
+      if (formData.password) {
+        data.append("password", formData.password);
       }
 
       console.log("FormData contents:");
@@ -125,27 +204,31 @@ export const Profile = () => {
       // Update original data with new values
       setOriginalData({
         ...formData,
-        avatar: null // Reset avatar as it's now uploaded
+        avatar: null, // Reset avatar as it's now uploaded
+        password: "", // Clear password fields
+        confirmPassword: ""
       });
+      
+      // Clear password fields in form data
+      setFormData(prev => ({
+        ...prev,
+        password: "",
+        confirmPassword: ""
+      }));
+      
+      setPasswordErrors([]);
     } catch (error) {
       console.error("Update error details:", error);
       
-      // More detailed error logging
       if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-        
         if (error.response.status === 500) {
           toast.error("Server error. Please check the console for details.");
         } else {
           toast.error(error.response.data?.message || `Error: ${error.response.status}`);
         }
       } else if (error.request) {
-        console.error("Request details:", error.request);
         toast.error("Network error. Please check your connection.");
       } else {
-        console.error("Error message:", error.message);
         toast.error(error.message || "Profile update failed");
       }
     } finally {
@@ -153,30 +236,8 @@ export const Profile = () => {
     }
   };
 
-  const changeEdit = ()=>{
+  const changeEdit = () => {
     setIsEditing(true);
-  }
-
-  const handleEditToggle = () => {
-      if (isEditing) {
-          // If canceling edit, revert to original data
-          setFormData(originalData);
-          // Also revert the preview if it was changed
-          const fetchCurrentProfile = async () => {
-              try {
-                  const profile = await authAPI.getProfile();
-                  if (profile.avatarUrl) {
-                      setPreview(profile.avatarUrl);
-                    } else if (profile.avatar) {
-                        setPreview(profile.avatar);
-                    }
-                } catch (error) {
-                    console.error("Failed to reload profile image");
-                }
-            };
-            fetchCurrentProfile();
-        }
-        setIsEditing(!isEditing);
   };
 
   const handleCancel = () => {
@@ -191,6 +252,8 @@ export const Profile = () => {
           email: profile.email || "",
           username: profile.username || "",
           avatar: null,
+          password: "",
+          confirmPassword: ""
         };
         
         setFormData(profileData);
@@ -203,6 +266,7 @@ export const Profile = () => {
         }
         
         setIsEditing(false);
+        setPasswordErrors([]);
       } catch (error) {
         toast.error("Failed to reload profile data");
       } finally {
@@ -343,6 +407,109 @@ export const Profile = () => {
                   Email cannot be changed
                 </p>
               </div>
+
+              {/* Password Fields - Only show when editing */}
+              {isEditing && (
+                <>
+                  <div className="md:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center mb-4">
+                      <Lock className="h-5 w-5 mr-2 text-blue-600" />
+                      Change Password
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      Leave these fields blank if you don't want to change your password
+                    </p>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed pr-10"
+                        placeholder="Enter new password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed pr-10"
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Password Validation Errors */}
+                  {passwordErrors.length > 0 && (
+                    <div className="md:col-span-2">
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                        <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                          Password Requirements:
+                        </h4>
+                        <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                          {passwordErrors.map((error, index) => (
+                            <li key={index} className="flex items-start">
+                              <span className="text-red-500 mr-2">•</span>
+                              {error}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Password Requirements Hint */}
+                  {formData.password && passwordErrors.length === 0 && (
+                    <div className="md:col-span-2">
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          ✓ Password meets all requirements
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -361,7 +528,7 @@ export const Profile = () => {
                 <>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || passwordErrors.length > 0}
                     className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-green-400 transition-colors duration-200 flex items-center justify-center"
                   >
                     <Save className="h-4 w-4 mr-2" />
@@ -369,7 +536,7 @@ export const Profile = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={handleEditToggle}
+                    onClick={handleCancel}
                     disabled={loading}
                     className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 disabled:bg-gray-400 transition-colors duration-200"
                   >
@@ -380,21 +547,6 @@ export const Profile = () => {
             </div>
           </form>
         </div>
-
-        {/* Debug Info (visible only in development) */}
-        {/* {process.env.NODE_ENV === 'development' && (
-          <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Debug Information
-            </h2>
-            <div className="text-sm font-mono text-gray-600 dark:text-gray-400 overflow-auto">
-              <p>Editing: {isEditing ? 'Yes' : 'No'}</p>
-              <p>Loading: {loading ? 'Yes' : 'No'}</p>
-              <p>Form Data: {JSON.stringify(formData, null, 2)}</p>
-              <p>Original Data: {JSON.stringify(originalData, null, 2)}</p>
-            </div>
-          </div>
-        )} */}
       </div>
     </div>
   );

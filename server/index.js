@@ -87,9 +87,9 @@ app.use((error, req, res, next) => {
 });
 
 // ✅ Start server
-const PORT = 3001;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running at http://localhost:${PORT}`)
-);
+// const PORT = 3001;
+// app.listen(PORT, () =>
+//   console.log(`🚀 Server running at http://localhost:${PORT}`)
+// );
 
 export default app;

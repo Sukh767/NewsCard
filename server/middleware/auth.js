@@ -1,20 +1,17 @@
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 
 const JWT_SECRET = 'Signature';
-
 
 const auth = (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    // console.log(token)
-    // console.log(JWT_SECRET)
 
     if (!token) {
       return res.status(401).json({ error: 'No token, authorization denied' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded; // { userId, username, role }
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
@@ -27,4 +24,4 @@ const auth = (req, res, next) => {
   }
 };
 
-export default auth
+export default auth;

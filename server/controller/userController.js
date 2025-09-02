@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 const JWT_SECRET = 'Signature';
@@ -140,13 +141,13 @@ const loginUser = async (req, res) => {
 // @access  Private
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user); // return full user object without password
+    res.json(user);
   } catch (error) {
     console.error('Profile fetch error:', error.message);
     res.status(500).json({ error: 'Failed to fetch profile' });
@@ -233,75 +234,74 @@ const logoutUser = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { firstName, lastName, username } = req.body;
+    const userId = req.user.userId;
+    const { firstName, lastName, username, password } = req.body;
 
-    // Find the user first
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Update fields if provided
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (username) user.username = username;
 
-    // If avatar uploaded, handle file update
+    // 🔐 Handle password update
+    if (password) {
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Password must be at least 8 characters long and contain at least 1 uppercase, 1 lowercase, 1 digit, and 1 special character',
+        });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    // Avatar upload
     if (req.file) {
       const avatarPath = `/uploads/${req.file.filename}`;
-      
-      // Delete old avatar if exists
+
       if (user.avatar) {
-        const oldPath = path.join(__dirname, '..', user.avatar);
+        const oldPath = path.join(__dirname, '..', user.avatar.replace(/^\//, ''));
         if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+          try {
+            fs.unlinkSync(oldPath);
+          } catch (unlinkErr) {
+            console.error('Error deleting old avatar:', unlinkErr.message);
+          }
         }
       }
-      
+
       user.avatar = avatarPath;
     }
 
-    // Save the updated user
     const updatedUser = await user.save();
-    
-    // Remove password from response
+
     const userResponse = updatedUser.toObject();
     delete userResponse.password;
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Profile updated successfully',
-      user: userResponse
+      user: userResponse,
     });
   } catch (err) {
-    console.error('Profile update error:', err);
-    
-    // Handle specific error types
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Validation error', 
-        errors: err.errors 
-      });
-    }
-    
-    if (err.code === 11000) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Username already exists' 
-      });
-    }
-    
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error during profile update' 
+    console.error('Profile update error:', err.stack || err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during profile update',
+      error: err.message,
     });
   }
 };
+
+
 
 const getProfile = async (req, res) => {
   try {

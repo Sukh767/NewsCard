@@ -20,20 +20,23 @@ const AdminDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      const data = await newsAPI.getAllNews();
-      console.log('Loaded articles:', data);
-      setArticles(data.news);
+      const response = await newsAPI.getAllNews();
+      console.log('Loaded articles:', response);
+      
+      // Check if response has news array
+      const articlesData = response.news || [];
+      setArticles(articlesData);
       
       // Calculate stats
       const now = new Date();
-      const thisMonth = data.filter(article => {
+      const thisMonth = articlesData.filter(article => {
         const articleDate = new Date(article.createdAt);
         return articleDate.getMonth() === now.getMonth() && 
                articleDate.getFullYear() === now.getFullYear();
       });
 
       setStats({
-        totalArticles: data.length,
+        totalArticles: articlesData.length,
         totalViews: Math.floor(Math.random() * 10000) + 1000, // Mock data
         totalUsers: Math.floor(Math.random() * 500) + 50, // Mock data
         articlesThisMonth: thisMonth.length,
@@ -84,15 +87,15 @@ const AdminDashboard = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 transition-colors duration-300">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white animate-fadeInLeft">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300 animate-fadeInLeft animation-delay-200">Welcome back! Here's what's happening with your news site.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-300">Welcome back! Here's what's happening with your news site.</p>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg transform hover:scale-105 animate-fadeInUp">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Total Articles</p>
@@ -102,7 +105,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg transform hover:scale-105 animate-fadeInUp animation-delay-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Total Views</p>
@@ -112,7 +115,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg transform hover:scale-105 animate-fadeInUp animation-delay-400">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Total Users</p>
@@ -122,7 +125,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg transform hover:scale-105 animate-fadeInUp animation-delay-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">This Month</p>
@@ -134,13 +137,13 @@ const AdminDashboard = () => {
           </div>
 
           {/* Recent Articles */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300 animate-fadeInUp animation-delay-800">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors duration-300">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Articles</h2>
                 <Link
                   to="/admin/add-news"
-                  className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300 transform hover:scale-105"
+                  className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300"
                 >
                   Add New Article
                 </Link>
@@ -166,8 +169,8 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {articles.slice(0, 10).map((article, index) => (
-                    <tr key={article._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 animate-fadeInUp" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
+                  {articles.slice(0, 10).map((article) => (
+                    <tr key={article._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
                           {article.title}
@@ -184,14 +187,14 @@ const AdminDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <Link
                           to={`/admin/edit-news/${article._id}`}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center transition-colors duration-200 transform hover:scale-105"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center transition-colors duration-200"
                         >
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Link>
                         <button
                           onClick={() => handleDeleteArticle(article._id)}
-                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 inline-flex items-center transition-colors duration-200 transform hover:scale-105"
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 inline-flex items-center transition-colors duration-200"
                         >
                           <Trash2 className="h-4 w-4 mr-1" />
                           Delete
@@ -204,13 +207,13 @@ const AdminDashboard = () => {
             </div>
 
             {articles.length === 0 && (
-              <div className="text-center py-12 animate-fadeInUp">
+              <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No articles yet</h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">Get started by creating your first article.</p>
                 <Link
                   to="/admin/add-news"
-                  className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300 transform hover:scale-105"
+                  className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300"
                 >
                   Create Article
                 </Link>
