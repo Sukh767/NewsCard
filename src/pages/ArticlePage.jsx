@@ -68,11 +68,6 @@ const ArticlePage = () => {
     return Math.ceil(words / wordsPerMinute);
   };
 
-  const toCloudinaryUrl = (url) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `https://res.cloudinary.com/drhfcappf/image/upload/${url}`;
-  };
-
   const handleShare = async (platform) => {
     const url = window.location.href;
     const title = article?.title || 'NewsHub Article';
@@ -282,7 +277,7 @@ const ArticlePage = () => {
           <div className="px-6 sm:px-8 mb-8 animate-fadeInUp animation-delay-600">
             <div className="relative overflow-hidden rounded-2xl shadow-lg">
               <img
-                src={toCloudinaryUrl(article.imageUrl) || 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
+                src={article.imageUrl || 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
                 alt={article.title}
                 className="w-full h-64 md:h-96 object-cover transform hover:scale-105 transition-transform duration-700"
               />

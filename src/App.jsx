@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import HomePage from './pages/HomePage';
@@ -24,15 +24,6 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const AuthOnlyRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
-  return children;
-};
-
 const App = () => {
   return (
     <ThemeProvider>
@@ -42,7 +33,7 @@ const App = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/article/:id" element={<AuthOnlyRoute><ArticlePage /></AuthOnlyRoute>} />
+            <Route path="/article/:id" element={<ArticlePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             

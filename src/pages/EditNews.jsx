@@ -99,21 +99,12 @@ const EditNews = () => {
       submitData.append('category', formData.category);
       
       if (imageFile) {
-        submitData.append('file', imageFile); // Ensure the key matches the backend
+        submitData.append('image', imageFile);
       } else if (formData.imageUrl) {
         submitData.append('imageUrl', formData.imageUrl);
       }
 
-      console.log("FormData content:");
-      for (let [key, value] of submitData.entries()) {
-        console.log(`${key}:`, value);
-      }
-
-      await newsAPI.updateArticle(id, submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data', // Explicitly set content type
-        },
-      });
+      await newsAPI.updateArticle(id, submitData);
       navigate('/admin');
     } catch (err) {
       setError('Failed to update article. Please try again.');

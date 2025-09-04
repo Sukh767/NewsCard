@@ -22,10 +22,12 @@ const AdminDashboard = () => {
     try {
       const response = await newsAPI.getAllNews();
       console.log('Loaded articles:', response);
-
+      
+      // Check if response has news array
       const articlesData = response.news || [];
       setArticles(articlesData);
-
+      
+      // Calculate stats
       const now = new Date();
       const thisMonth = articlesData.filter(article => {
         const articleDate = new Date(article.createdAt);
@@ -169,31 +171,19 @@ const AdminDashboard = () => {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {articles.slice(0, 10).map((article) => (
                     <tr key={article._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                      {/* Image + Title */}
-                      <td className="px-6 py-4 whitespace-nowrap flex items-center">
-                        <img
-                          src={article.imageUrl || 'https://images.pexels.com/photos/518543/pexels-photo-518543.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=80&w=80'}
-                          alt={article.title}
-                          className="h-10 w-10 rounded-md object-cover mr-3"
-                        />
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
                           {article.title}
                         </div>
                       </td>
-
-                      {/* Category */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                           {article.category}
                         </span>
                       </td>
-
-                      {/* Date */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {formatDate(article.createdAt)}
                       </td>
-
-                      {/* Actions */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <Link
                           to={`/admin/edit-news/${article._id}`}

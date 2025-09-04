@@ -21,7 +21,7 @@ const HomePage = () => {
   const loadArticles = async () => {
     try {
       setLoading(true);
-      const data = await newsAPI.getAllNews({ category: selectedCategory, search: searchTerm });
+      const data = await newsAPI.getAllNews(selectedCategory, searchTerm);
       console.log(data);
       setArticles(data.news);
     } catch (err) {
@@ -36,7 +36,7 @@ const HomePage = () => {
     try {
       setTrendingLoading(true);
       // Simulate trending articles - in a real app, you'd have an API endpoint for this
-      const data = await newsAPI.getAllNews({});
+      const data = await newsAPI.getAllNews('', '');
       // Filter or sort to get trending articles (by views, likes, date, etc.)
       const trending = data.news
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -55,11 +55,6 @@ const HomePage = () => {
 
   const handleCategoryFilter = (category) => {
     setSelectedCategory(category);
-  };
-
-  const toCloudinaryUrl = (url) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `https://res.cloudinary.com/drhfcappf/image/upload/${url}`;
   };
 
   const TrendingNewsSection = () => (
@@ -94,7 +89,7 @@ const HomePage = () => {
             >
               <div className="relative overflow-hidden rounded-lg mb-3">
                 <img 
-                  src={toCloudinaryUrl(article.imageUrl) || '/api/placeholder/300/200'} 
+                  src={article.imageUrl || '/api/placeholder/300/200'} 
                   alt={article.title}
                   className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                 />
