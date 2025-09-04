@@ -1,17 +1,14 @@
-import mongoose from 'mongoose';
-import colors from 'colors';
+import mongoose from "mongoose";
+import colors from "colors";
 
-const connectDB = async () => {
+const db = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('MongoDB Connected successfully'.green);
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`.green.bold);
   } catch (error) {
-    console.error('MongoDB connection error:'.red, error.message);
+    console.error(`Error: ${error.message}`.red.bold);
     process.exit(1);
   }
 };
 
-export default connectDB;
+export default db;
