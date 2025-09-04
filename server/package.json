@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.7.0",
     "colors": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",

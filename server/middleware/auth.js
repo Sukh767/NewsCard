@@ -1,33 +1,26 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
 
-const auth = async (req, res, next) => {
-  let token;
+const JWT_SECRET = 'Signature';
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+const auth = (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
 
-      // Attach minimal user info to req.user
-      req.user = {
-        userId: decoded.userId,
-        username: decoded.username,
-        role: decoded.role,
-      };
-
-      next();
-    } catch (error) {
-      console.error("Auth middleware error:", error.message);
-      return res.status(401).json({ message: "Not authorized, token failed" });
+    if (!token) {
+      return res.status(401).json({ error: 'No token, authorization denied' });
     }
-  }
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // { userId, username, role }
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token' });
+    } else if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    res.status(401).json({ error: 'Token is not valid' });
   }
 };
 
