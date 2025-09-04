@@ -1,44 +1,21 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const newsSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true
+const newsSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    content: { type: String, required: true },
+    description: { type: String, required: true, trim: true },
+    category: {
+      type: String,
+      required: true,
+      enum: ["Technology", "Sports", "Politics", "Entertainment", "Health", "Business"],
+    },
+    imageUrl: { type: String, default: "" },
   },
-  content: {
-    type: String,
-    required: true
-  },
-  description: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  category: {
-    type: String,
-    required: true,
-    enum: ['Technology', 'Sports', 'Politics', 'Entertainment', 'Health', 'Business']
-  },
-  imageUrl: {
-    type: String,
-    default: ''
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  { timestamps: true }
+);
 
-// Automatically update `updatedAt` on save
-newsSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
+newsSchema.index({ title: "text", description: "text", content: "text" });
+newsSchema.index({ category: 1 });
 
-const News = mongoose.model('News', newsSchema);
-export default News;
+export default mongoose.model("News", newsSchema);

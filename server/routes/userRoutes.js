@@ -1,39 +1,38 @@
-import express from 'express';
-import auth from '../middleware/auth.js'
-import { getAllUsers, getUserProfile, loginUser, logoutUser, registerUser, updateProfile } from '../controller/userController.js';
-import { upload } from '../config/multerConfig.js';
-
+import express from "express";
+import auth from "../middleware/auth.js";
+import {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateProfile,
+  getAllUsers,
+  createUser,
+  deleteUser,
+  logoutUser,
+} from "../controllers/userController.js";
 
 const router = express.Router();
 
-// @route   POST /api/users/profile
-// @desc    Update user details
-// @access  Private
-router.put('/update', auth, upload.single('avatar'), updateProfile);
+// Admin-only middleware
+const adminOnly = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Access denied: Admin only" });
+  }
+  next();
+};
 
-// @route   POST /api/users/register
-// @desc    Register a new user
-// @access  Public
-router.post('/register', registerUser);
+// Auth routes
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.post("/logout", auth, logoutUser);
 
-// @route   POST /api/users/login
-// @desc    Login user or admin
-// @access  Public
-router.post('/login', loginUser);
+// Profile routes
+router.get("/profile", auth, getUserProfile);
+router.put("/profile", auth, updateProfile);
 
-// @route   POST /api/users/logout
-// @desc    Logout user (clear token)
-// @access  Private
-router.post('/logout', auth, logoutUser);
-
-// @route   GET /api/users/profile
-// @desc    Get logged-in user's profile
-// @access  Private
-router.get('/profile', auth, getUserProfile);
-
-// @route   GET /api/users
-// @desc    Get all users (admin only)
-// @access  Private/Admin
-router.get('/', auth, getAllUsers);
+// Admin-only routes
+router.get("/", auth, adminOnly, getAllUsers);
+router.post("/", auth, adminOnly, createUser);
+router.delete("/:id", auth, adminOnly, deleteUser);
 
 export default router;
