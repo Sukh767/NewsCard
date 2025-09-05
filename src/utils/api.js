@@ -75,6 +75,18 @@ export const newsAPI = {
   deleteArticle: async (id) => {
     await safeApiCall(() => api.delete(`/news/${id}`));
   },
+
+  // 🔹 Like an article
+  likeArticle: async (id) => {
+    const response = await safeApiCall(() => api.patch(`/news/${id}/like`));
+    return response?.data || null;
+  },
+
+  // 🔹 Unlike an article
+  unlikeArticle: async (id) => {
+    const response = await safeApiCall(() => api.patch(`/news/${id}/unlike`));
+    return response?.data || null;
+  },
 };
 
 export const authAPI = {

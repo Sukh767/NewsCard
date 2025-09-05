@@ -1,34 +1,45 @@
-import jwt from "jsonwebtoken";
-import User from "../models/User.js";
+import jwt from "jsonwebtoken"
+import { asyncHandler } from "../utils/asyncHandler.js"
+import { ApiError } from "../utils/ApiError.js"
+import User from "../models/User.js"
 
-const auth = async (req, res, next) => {
-  let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+const verifyJWT = asyncHandler(async (req, res, next) => {
+    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
 
-      // Attach minimal user info to req.user
-      req.user = {
-        userId: decoded.userId,
-        username: decoded.username,
-        role: decoded.role,
-      };
-
-      next();
-    } catch (error) {
-      console.error("Auth middleware error:", error.message);
-      return res.status(401).json({ message: "Not authorized, token failed" });
+    if (!token) {
+        return next(new ApiError(401, "Unauthorized"))
     }
-  }
+    try {
+        // console.log("Access Token:", token);
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET)
+        // console.log("Verified token:", decodedToken)
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
-  }
-};
+        const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
+        // console.log(user)
 
-export default auth;
+        if (!user) {
+            return next(new ApiError(401, "Unauthorized"))
+        }
+
+        req.user = user
+        next()
+    } catch (err) {
+        console.error("JWT verification error:", err.message);
+        return next( new ApiError(401, err?.message || "Invalid access token"))
+
+    }
+})
+
+const authRole = asyncHandler(async (req, res, next) => {
+    if (req.user && req.user.isAdmin) {
+        next()
+    } else {
+        return next(new ApiError(401, "Permission denied, contact admin"))
+    }
+})
+
+export {
+    verifyJWT,
+    authRole,
+}

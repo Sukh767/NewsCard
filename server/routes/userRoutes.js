@@ -1,5 +1,5 @@
 import express from "express";
-import auth from "../middleware/auth.js";
+import { authRole, verifyJWT } from "../middleware/auth.js";
 import {
   registerUser,
   loginUser,
@@ -24,15 +24,15 @@ const adminOnly = (req, res, next) => {
 // Auth routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-router.post("/logout", auth, logoutUser);
+router.post("/logout", verifyJWT, logoutUser);
 
 // Profile routes
-router.get("/profile", auth, getUserProfile);
-router.put("/profile", auth, updateProfile);
+router.get("/profile", verifyJWT, getUserProfile);
+router.put("/profile", verifyJWT, updateProfile);
 
 // Admin-only routes
-router.get("/", auth, adminOnly, getAllUsers);
-router.post("/", auth, adminOnly, createUser);
-router.delete("/:id", auth, adminOnly, deleteUser);
+router.get("/", verifyJWT, authRole, getAllUsers);
+router.post("/", verifyJWT, authRole, createUser);
+router.delete("/:id", verifyJWT, authRole, deleteUser);
 
 export default router;

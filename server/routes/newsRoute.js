@@ -8,64 +8,57 @@ import {
   updateNews,
   deleteNews,
   ingestNews,
+  unlikeNews,
+  likeNews,
 } from "../controllers/newsController.js";
-import multer from "multer";
-import cloudinaryStorage from "../middleware/uploadCloudinary.js"; // Import the configured upload middleware
-import auth from "../middleware/auth.js";
+import { authRole, verifyJWT } from "../middleware/auth.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = express.Router();
-// const upload = multer({ dest: "uploads/" }); // Remove this line
-const upload = multer({ storage: cloudinaryStorage });
 
-// Accept common file field names and normalize to req.file
+// 🔹 Normalize file handling into req.file
 const acceptImageUpload = [
+  upload.single("image"), // expect `image` field (common for news articles)
   (req, res, next) => {
-    console.log("Middleware triggered. Request headers:", req.headers);
-    console.log("Middleware triggered. Request body:", req.body);
+    if (!req.file && req.files?.length > 0) {
+      // Fallback: take the first uploaded file if not under "image"
+      req.file = req.files[0];
+    }
+    console.log("Request file:", req.file?.originalname);
     next();
   },
-  upload.any(),
-  (req, res, next) => {
-    if (Array.isArray(req.files) && req.files.length > 0) {
-      const preferredFieldNames = ["image", "file", "avatar", "photo", "picture"];
-      let selected = req.files.find(f => preferredFieldNames.includes(f.fieldname));
-      if (!selected) {
-        selected = req.files[0];
-      }
-      req.file = selected;
-    }
-    console.log("Request file:", req.file);
-    console.log("Request files:", req.files);
-    next();
-  }
 ];
 
+// ====================== ROUTES ======================
 router.get("/", getAllNews);
 router.get("/featured", getFeaturedNews);
 router.get("/categories", getCategories);
 router.get("/:id", getSingleNews);
 
-// Admin-only ingest route
-router.post("/ingest", auth, async (req, res, next) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
-  next();
-}, ingestNews);
+router.patch("/:id/like", likeNews);
+router.patch("/:id/unlike", unlikeNews);
 
-// For JSON requests, parse body; for multipart, Multer will handle it.
+// 🔹 Admin-only ingest route
 router.post(
-  "/",
-  express.json(),
-  express.urlencoded({ extended: true }),
-  ...acceptImageUpload,
-  createNews
+  "/ingest",
+  verifyJWT,
+  authRole,
+  (req, res, next) => {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    next();
+  },
+  ingestNews
 );
-router.put(
-  "/:id",
-  express.json(),
-  express.urlencoded({ extended: true }),
-  ...acceptImageUpload,
-  updateNews
-);
+
+// 🔹 Create news (with optional image upload)
+router.post("/", ...acceptImageUpload, createNews);
+
+// 🔹 Update news (with optional image upload)
+router.put("/:id", ...acceptImageUpload, updateNews);
+
+// 🔹 Delete news
 router.delete("/:id", deleteNews);
 
 export default router;

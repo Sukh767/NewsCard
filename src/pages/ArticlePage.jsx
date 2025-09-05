@@ -31,26 +31,40 @@ const ArticlePage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [id]);
 
-  const loadArticle = async (articleId) => {
-    try {
-      setLoading(true);
-      const data = await newsAPI.getArticle(articleId);
-      console.log('Loaded article:', data);
-      setArticle(data);
-      
-      // Simulate engagement metrics (in a real app, these would come from the API)
-      setLikeCount(Math.floor(Math.random() * 100) + 50);
-      setViewCount(Math.floor(Math.random() * 1000) + 500);
-      
-      // Check if article is bookmarked (simulated)
-      setIsBookmarked(localStorage.getItem(`bookmark_${articleId}`) === 'true');
-    } catch (err) {
-      setError('Failed to load article');
-      console.error('Error loading article:', err);
-    } finally {
-      setLoading(false);
+ // Inside loadArticle
+const loadArticle = async (articleId) => {
+  try {
+    setLoading(true);
+    const data = await newsAPI.getArticle(articleId);
+    setArticle(data);
+
+    // likes come directly from the article
+    setLikeCount(data.likes || 0);
+    setIsLiked(data.isLiked || false); // if backend sends it
+
+    setIsBookmarked(localStorage.getItem(`bookmark_${articleId}`) === 'true');
+  } catch (err) {
+    setError('Failed to load article');
+    console.error('Error loading article:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+// Handle Like
+const handleLike = async () => {
+  try {
+    const res = await newsAPI.likeArticle(id);
+    if (res) {
+      setIsLiked(res.isLiked);
+      setLikeCount(res.likes);
     }
-  };
+  } catch (err) {
+    console.error("Error liking article:", err);
+  }
+};
+
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -107,10 +121,10 @@ const ArticlePage = () => {
     localStorage.setItem(`bookmark_${id}`, !isBookmarked);
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-  };
+  // const handleLike = () => {
+  //   setIsLiked(!isLiked);
+  //   setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+  // };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

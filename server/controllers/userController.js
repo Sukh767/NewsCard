@@ -11,18 +11,27 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Check user
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    // Generate JWT token
     const token = generateToken(user._id, user.role);
+
     res.status(200).json({
       message: "Login successful",
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isAdmin: user.isAdmin,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar,
+      },
       token,
     });
   } catch (error) {
@@ -34,7 +43,7 @@ export const loginUser = async (req, res) => {
 // ====================== REGISTER ======================
 export const registerUser = async (req, res) => {
   try {
-    const { username, email, password, firstName, lastName, avatar } = req.body;
+    const { username, email, password, firstName, lastName, avatar, role, isAdmin } = req.body;
 
     // Validate required fields
     if (!email || !password || !username) {
@@ -55,11 +64,13 @@ export const registerUser = async (req, res) => {
       firstName,
       lastName,
       avatar,
+      role: role || "user",      // fallback to default
+      isAdmin: isAdmin || false, // fallback to default
     });
 
     await newUser.save();
 
-    // Generate token for immediate login
+    // Generate JWT token
     const token = generateToken(newUser._id, newUser.role);
 
     res.status(201).json({
@@ -68,6 +79,8 @@ export const registerUser = async (req, res) => {
         id: newUser._id,
         username: newUser.username,
         email: newUser.email,
+        role: newUser.role,
+        isAdmin: newUser.isAdmin,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         avatar: newUser.avatar,
@@ -87,7 +100,11 @@ export const getUserProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    res.status(200).json(user);
+
+    res.status(200).json({
+      message: "Profile fetched successfully",
+      user,
+    });
   } catch (error) {
     console.error("Error fetching user profile:", error);
     res.status(500).json({ error: "Failed to fetch user profile" });
@@ -98,8 +115,12 @@ export const getUserProfile = async (req, res) => {
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().sort({ createdAt: -1 }).select("-password");
-    res.json(users);
+    res.status(200).json({
+      message: "Users fetched successfully",
+      users,
+    });
   } catch (error) {
+    console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 };
@@ -111,8 +132,13 @@ export const deleteUser = async (req, res) => {
     if (!deletedUser) {
       return res.status(404).json({ error: "User not found" });
     }
-    res.status(200).json({ message: "User deleted successfully" });
+
+    res.status(200).json({
+      message: "User deleted successfully",
+      userId: deletedUser._id,
+    });
   } catch (error) {
+    console.error("Error deleting user:", error);
     res.status(500).json({ error: "Failed to delete user" });
   }
 };
@@ -120,7 +146,7 @@ export const deleteUser = async (req, res) => {
 // ====================== UPDATE PROFILE ======================
 export const updateProfile = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, firstName, lastName, avatar } = req.body;
 
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -129,11 +155,24 @@ export const updateProfile = async (req, res) => {
 
     if (username) user.username = username;
     if (email) user.email = email;
-    if (password) user.password = password;
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (avatar) user.avatar = avatar;
+
+    // only update password if new one is provided
+    if (password && !(await user.comparePassword(password))) {
+      user.password = password;
+    }
 
     await user.save();
 
-    res.status(200).json({ message: "Profile updated successfully", user });
+    const sanitizedUser = user.toObject();
+    delete sanitizedUser.password;
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: sanitizedUser,
+    });
   } catch (error) {
     console.error("Error updating profile:", error);
     res.status(500).json({ error: "Failed to update profile" });

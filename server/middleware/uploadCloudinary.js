@@ -1,14 +1,31 @@
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary.js";
+import dotenv from "dotenv"
+import { v2 as cloudinary } from "cloudinary"
+import fs from "fs"
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "news_app", 
-    allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    transformation: [{ width: 800, height: 600, crop: "limit" }],
-  },
+dotenv.config({
+    path: "./.env"
+})
+
+// Configuration
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export default storage;
+const uploadOnCloudinary = async (path) => {
+    try {
+        if (!path) return null
+        const response = await cloudinary.uploader.upload(path, { resource_type: "auto", folder: "/NewsCard" })
+        //console.log(response)
+        //console.log("File uploaded on cloudinary. File src: " + response.url)
+        fs.unlinkSync(path)
+        return response
+    } catch (err) {
+        console.log(err)
+        fs.unlinkSync(path)
+        return null
+    }
+}
+
+export { uploadOnCloudinary }

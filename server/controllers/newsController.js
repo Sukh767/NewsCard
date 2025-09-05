@@ -5,11 +5,11 @@ import fs from "fs";
 // ------------------ GET ALL NEWS ------------------
 export const getAllNews = async (req, res) => {
   try {
-    const { category, search, page = 1, limit = 20 } = req.query;
-    const query = {};
+    const { category, search, page = 1, limit = 20, sortBy = "createdAt", order = "desc" } = req.query;
 
+    const query = {};
     if (category) query.category = category;
-    if (search) {
+    if (search?.trim()) {
       query.$or = [
         { title: { $regex: search.trim(), $options: "i" } },
         { description: { $regex: search.trim(), $options: "i" } },
@@ -18,10 +18,17 @@ export const getAllNews = async (req, res) => {
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // 🔹 Sorting dynamically
+    const sortOrder = order === "asc" ? 1 : -1;
+    const sortCriteria = { [sortBy]: sortOrder };
+
     const news = await News.find(query)
-      .sort({ createdAt: -1 })
+      .sort(sortCriteria)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .select("-__v");
+
     const total = await News.countDocuments(query);
 
     res.json({
@@ -34,7 +41,7 @@ export const getAllNews = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error details:", error);
+    console.error("Error in getAllNews:", error);
     res.status(500).json({ error: "Failed to fetch news articles" });
   }
 };
@@ -42,10 +49,14 @@ export const getAllNews = async (req, res) => {
 // ------------------ GET FEATURED NEWS ------------------
 export const getFeaturedNews = async (req, res) => {
   try {
-    const news = await News.find().sort({ createdAt: -1 }).limit(5);
+    // 🔹 Most viewed or most recent
+    const news = await News.find()
+      .sort({ views: -1, createdAt: -1 })
+      .limit(5)
+      .select("title description category imageUrl views likes createdAt");
     res.json(news);
   } catch (error) {
-    console.error("Error details:", error);
+    console.error("Error in getFeaturedNews:", error);
     res.status(500).json({ error: "Failed to fetch featured news" });
   }
 };
@@ -56,7 +67,7 @@ export const getCategories = async (req, res) => {
     const categories = await News.distinct("category");
     res.json(categories);
   } catch (error) {
-    console.error("Error details:", error);
+    console.error("Error in getCategories:", error);
     res.status(500).json({ error: "Failed to fetch categories" });
   }
 };
@@ -64,14 +75,22 @@ export const getCategories = async (req, res) => {
 // ------------------ GET SINGLE NEWS ------------------
 export const getSingleNews = async (req, res) => {
   try {
-    const news = await News.findById(req.params.id);
+    // 🔹 Increment views on each fetch
+    const news = await News.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).select("-__v");
+
     if (!news) return res.status(404).json({ error: "News not found" });
+
     res.json(news);
   } catch (error) {
-    console.error("Error details:", error);
+    console.error("Error in getSingleNews:", error);
     res.status(500).json({ error: "Failed to fetch news article" });
   }
 };
+
 
 // Helper to resolve a secure Cloudinary URL from Multer file object
 const resolveCloudinaryUrl = (file) => {
@@ -90,60 +109,121 @@ export const createNews = async (req, res) => {
   try {
     const { title, content, description, category, imageUrl } = req.body;
 
-    console.log("Incoming request body:", req.body);
-
+    // 🔹 Validate required fields
     if (!title?.trim() || !content?.trim() || !description?.trim() || !category?.trim()) {
       return res.status(400).json({
         message: "All fields are required: title, content, description, and category.",
       });
     }
 
-    const validCategories = ['Technology', 'Sports', 'Politics', 'Entertainment', 'Health', 'Business'];
+    // 🔹 Validate category
+    const validCategories = ["Technology", "Sports", "Politics", "Entertainment", "Health", "Business"];
     if (!validCategories.includes(category)) {
       return res.status(400).json({ message: "Invalid category." });
     }
 
-    let imageUrlToSave = imageUrl;
-
-    if (req.file) {
+    // 🔹 Handle image (priority: imageUrl > file > default)
+    let imageUrlToSave = imageUrl?.trim();
+    if (!imageUrlToSave && req.file) {
       console.log("Uploaded file for createNews:", req.file);
-      imageUrlToSave = resolveCloudinaryUrl(req.file) || imageUrlToSave;
+      imageUrlToSave = resolveCloudinaryUrl(req.file);
+    }
+    if (!imageUrlToSave) {
+      imageUrlToSave = "https://via.placeholder.com/600x400?text=Default+News+Image"; // 🔹 default fallback
     }
 
-    const news = new News({ title: title.trim(), content: content.trim(), description: description.trim(), category, imageUrl: imageUrlToSave });
+    // 🔹 Create news doc
+    const news = new News({
+      title: title.trim(),
+      content: content.trim(),
+      description: description.trim(),
+      category,
+      imageUrl: imageUrlToSave,
+    });
+
     await news.save();
 
     res.status(201).json({ message: "News created successfully", news });
   } catch (error) {
-    console.error("Error creating news:", error.message);
-    console.error("Error details:", error);
-    res.status(500).json({ message: "Error creating news", error });
+    console.error("Error creating news:", error);
+    res.status(500).json({ message: "Error creating news" });
   }
 };
 
 // ------------------ UPDATE NEWS ------------------
 export const updateNews = async (req, res) => {
   try {
-    const { title, description, content, category } = req.body;
+    const { title, description, content, category, imageUrl } = req.body;
 
-    const updateData = { title, description, content, category };
+    // 🔹 Build update object only with provided fields
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (description) updateData.description = description.trim();
+    if (content) updateData.content = content.trim();
+    if (category) updateData.category = category;
 
-    if (req.file) {
-      console.log("Uploaded file:", req.file);
-      console.log("Request body:", req.body);
+    // 🔹 Handle image (priority: body imageUrl > file > default)
+    if (imageUrl?.trim()) {
+      updateData.imageUrl = imageUrl.trim();
+    } else if (req.file) {
+      console.log("Uploaded file for updateNews:", req.file);
       updateData.imageUrl = resolveCloudinaryUrl(req.file);
+    } else {
+      updateData.imageUrl = "https://via.placeholder.com/600x400?text=Default+News+Image"; // 🔹 default fallback
     }
 
-    const updated = await News.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const updated = await News.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-__v");
 
-    if (!updated) return res.status(404).json({ error: "News not found" });
-    res.json(updated);
+    if (!updated) {
+      return res.status(404).json({ error: "News not found" });
+    }
+
+    res.json({ message: "News updated successfully", news: updated });
   } catch (error) {
-    console.error("Error updating news:", error.message);
-    console.error("Error details:", error);
-    res.status(500).json({ message: "Error updating news", error });
+    console.error("Error updating news:", error);
+    res.status(500).json({ message: "Error updating news" });
   }
 };
+
+// ------------------ LIKE NEWS ------------------
+export const likeNews = async (req, res) => {
+  try {
+    const news = await News.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { likes: 1 } }, // increment likes
+      { new: true }
+    ).select("-__v");
+
+    if (!news) return res.status(404).json({ error: "News not found" });
+
+    res.json({ message: "News liked", likes: news.likes });
+  } catch (error) {
+    console.error("Error liking news:", error);
+    res.status(500).json({ error: "Failed to like news" });
+  }
+};
+
+// ------------------ UNLIKE NEWS ------------------
+export const unlikeNews = async (req, res) => {
+  try {
+    const news = await News.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { likes: -1 } }, // decrement likes
+      { new: true }
+    ).select("-__v");
+
+    if (!news) return res.status(404).json({ error: "News not found" });
+
+    res.json({ message: "News unliked", likes: news.likes });
+  } catch (error) {
+    console.error("Error unliking news:", error);
+    res.status(500).json({ error: "Failed to unlike news" });
+  }
+};
+
 
 // ------------------ DELETE NEWS ------------------
 export const deleteNews = async (req, res) => {
