@@ -28,7 +28,7 @@ router.post("/logout", verifyJWT, logoutUser);
 
 // Profile routes
 router.get("/profile", verifyJWT, getUserProfile);
-router.put("/profile", verifyJWT, updateProfile);
+router.put("/update", verifyJWT, updateProfile);
 
 // Admin-only routes
 router.get("/", verifyJWT, authRole, getAllUsers);

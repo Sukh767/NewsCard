@@ -6,8 +6,8 @@ import { Home, User, Mail, UserCheck, Save, Camera, Edit, Lock, Eye, EyeOff } fr
 
 export const Profile = () => {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    username: "",
+    // lastName: "",
     email: "",
     username: "",
     avatar: null,
@@ -55,26 +55,34 @@ export const Profile = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const profile = await authAPI.getProfile();
+        const response = await authAPI.getProfile();
+        console.log("Profile page", response);
         
-        const profileData = {
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || "",
-          username: profile.username || "",
-          avatar: null,
-          password: "",
-          confirmPassword: ""
-        };
-        
-        setFormData(profileData);
-        setOriginalData(profileData);
-        
-        // Set profile picture if available
-        if (profile.avatarUrl) {
-          setPreview(profile.avatarUrl);
-        } else if (profile.avatar) {
-          setPreview(profile.avatar);
+        // Check if response contains user data
+        if (response && response.user) {
+          const userData = response.user;
+          
+          const profileData = {
+            username: userData.username || "",
+            lastName: userData.lastName || "",
+            email: userData.email || "",
+            username: userData.username || "",
+            avatar: null,
+            password: "",
+            confirmPassword: ""
+          };
+          
+          setFormData(profileData);
+          setOriginalData(profileData);
+          
+          // Set profile picture if available
+          if (userData.avatarUrl) {
+            setPreview(userData.avatarUrl);
+          } else if (userData.avatar) {
+            setPreview(userData.avatar);
+          }
+        } else {
+          toast.error("Failed to load profile data");
         }
       } catch (error) {
         console.error("Profile fetch error:", error);
@@ -166,8 +174,8 @@ export const Profile = () => {
       const data = new FormData();
       
       // Only append fields that have changed
-      if (formData.firstName !== originalData.firstName) {
-        data.append("firstName", formData.firstName);
+      if (formData.username !== originalData.username) {
+        data.append("username", formData.username);
       }
       if (formData.lastName !== originalData.lastName) {
         data.append("lastName", formData.lastName);
@@ -245,28 +253,34 @@ export const Profile = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const profile = await authAPI.getProfile();
-        const profileData = {
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || "",
-          username: profile.username || "",
-          avatar: null,
-          password: "",
-          confirmPassword: ""
-        };
+        const response = await authAPI.getProfile();
         
-        setFormData(profileData);
-        setOriginalData(profileData);
-        
-        if (profile.avatar) {
-          setPreview(profile.avatar);
-        } else if (profile.avatar) {
-          setPreview(profile.avatar);
+        if (response && response.user) {
+          const userData = response.user;
+          const profileData = {
+            username: userData.username || "",
+            lastName: userData.lastName || "",
+            email: userData.email || "",
+            // username: userData.username || "",
+            avatar: null,
+            password: "",
+            confirmPassword: ""
+          };
+          
+          setFormData(profileData);
+          setOriginalData(profileData);
+          
+          if (userData.avatarUrl) {
+            setPreview(userData.avatarUrl);
+          } else if (userData.avatar) {
+            setPreview(userData.avatar);
+          }
+          
+          setIsEditing(false);
+          setPasswordErrors([]);
+        } else {
+          toast.error("Failed to reload profile data");
         }
-        
-        setIsEditing(false);
-        setPasswordErrors([]);
       } catch (error) {
         toast.error("Failed to reload profile data");
       } finally {
@@ -277,90 +291,108 @@ export const Profile = () => {
     fetchProfile();
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header with Home Button */}
-        <div className="flex justify-between items-center mb-6">
-          <Link 
-            to="/" 
-            className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-200"
-          >
-            <Home className="h-5 w-5 mr-2" />
-            Back to Home
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 mb-8">
+          <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <Home className="h-4 w-4" />
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-            <UserCheck className="h-8 w-8 mr-2 text-blue-600" />
-            My Profile
-          </h1>
+          <span>/</span>
+          <span className="text-gray-900 dark:text-white">Profile</span>
+        </nav>
+
+        {/* Profile Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
+            {!isEditing && (
+              <button
+                onClick={changeEdit}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Edit className="h-4 w-4" />
+                <span>Edit Profile</span>
+              </button>
+            )}
+          </div>
+
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage your account settings and update your personal information.
+          </p>
         </div>
 
-        {/* Profile Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-          {loading && !isEditing && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20">
-              <p className="text-blue-600 dark:text-blue-400">Loading...</p>
-            </div>
-          )}
-
-          <form onSubmit={handleUpdate} className="p-6 space-y-6">
-            {/* Profile Image Section */}
-            <div className="flex flex-col items-center">
-              <div className="relative mb-4">
-                {preview ? (
-                  <img
-                    src={preview}
-                    alt="Profile"
-                    className="w-32 h-32 object-cover rounded-lg shadow-md border-2 border-gray-200 dark:border-gray-700"
-                  />
-                ) : (
-                  <div className="w-32 h-32 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center border-2 border-gray-300 dark:border-gray-600">
-                    <User className="h-16 w-16 text-gray-400 dark:text-gray-500" />
-                  </div>
-                )}
-                
+        {/* Profile Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <form onSubmit={handleUpdate} className="space-y-6">
+            {/* Avatar Section */}
+            <div className="flex items-center space-x-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-12 w-12 text-gray-400" />
+                  )}
+                </div>
                 {isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-blue-700 transition-colors duration-200">
+                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
                     <Camera className="h-4 w-4" />
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleFileChange} 
-                      className="hidden" 
-                      disabled={loading}
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      accept="image/*"
                     />
                   </label>
                 )}
               </div>
-              
-              {isEditing && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  Click the camera icon to change your profile picture
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Profile Photo
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  JPG, GIF or PNG. Max size of 5MB.
                 </p>
-              )}
+              </div>
             </div>
 
-            {/* Form Fields */}
+            {/* Form Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* First Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  First Name
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  User Name
                 </label>
                 <input
                   type="text"
-                  name="firstName"
-                  value={formData.firstName}
+                  name="username"
+                  value={formData.username}
                   onChange={handleChange}
-                  disabled={!isEditing || loading}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  placeholder="Enter first name"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
               {/* Last Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {/* <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Last Name
                 </label>
                 <input
@@ -368,188 +400,140 @@ export const Profile = () => {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  disabled={!isEditing || loading}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  placeholder="Enter last name"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-              </div>
-
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  disabled={!isEditing || loading}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  placeholder="Enter username"
-                />
-              </div>
+              </div> */}
 
               {/* Email */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center">
-                  <Mail className="h-4 w-4 mr-1" />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email Address
                 </label>
-                <input
-                  type="email"
-                  name="email"
-                  disabled
-                  value={formData.email}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white cursor-not-allowed"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Email cannot be changed
-                </p>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={true}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
               </div>
 
-              {/* Password Fields - Only show when editing */}
+              {/* username */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  username
+                </label>
+                <div className="relative">
+                  <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
               {isEditing && (
                 <>
-                  <div className="md:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center mb-4">
-                      <Lock className="h-5 w-5 mr-2 text-blue-600" />
-                      Change Password
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      Leave these fields blank if you don't want to change your password
-                    </p>
-                  </div>
-
-                  {/* Password */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       New Password
                     </label>
                     <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         type={showPassword ? "text" : "password"}
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        disabled={loading}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed pr-10"
-                        placeholder="Enter new password"
+                        className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       />
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
                         onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        )}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Confirm Password
                     </label>
                     <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        disabled={loading}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed pr-10"
-                        placeholder="Confirm new password"
+                        className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       />
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        )}
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
-
-                  {/* Password Validation Errors */}
-                  {passwordErrors.length > 0 && (
-                    <div className="md:col-span-2">
-                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                        <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
-                          Password Requirements:
-                        </h4>
-                        <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                          {passwordErrors.map((error, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="text-red-500 mr-2">•</span>
-                              {error}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Password Requirements Hint */}
-                  {formData.password && passwordErrors.length === 0 && (
-                    <div className="md:col-span-2">
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                        <p className="text-sm text-green-700 dark:text-green-300">
-                          ✓ Password meets all requirements
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>
+
+            {/* Password Validation Errors */}
+            {passwordErrors.length > 0 && isEditing && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">
+                  Password Requirements:
+                </h4>
+                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                  {passwordErrors.map((error, index) => (
+                    <li key={index} className="flex items-center">
+                      <span className="text-red-500 mr-2">•</span>
+                      {error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              {!isEditing ? (
+            {isEditing && (
+              <div className="flex items-center space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>{loading ? "Saving..." : "Save Changes"}</span>
+                </button>
                 <button
                   type="button"
-                  onClick={changeEdit}
-                  disabled={loading}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors duration-200 flex items-center justify-center"
+                  onClick={handleCancel}
+                  className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Profile
+                  Cancel
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="submit"
-                    disabled={loading || passwordErrors.length > 0}
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-green-400 transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {loading ? "Updating..." : "Save Changes"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={loading}
-                    className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 disabled:bg-gray-400 transition-colors duration-200"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </form>
         </div>
       </div>
     </div>
   );
 };
-
-export default Profile;

@@ -7,7 +7,7 @@
  * @property {string} content
  * @property {string} description
  * @property {string} category
- * @property {string} imageUrl
+ * @property {string} image
  * @property {string} createdAt
  * @property {string} updatedAt
  */

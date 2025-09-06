@@ -31,40 +31,51 @@ const ArticlePage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [id]);
 
- // Inside loadArticle
-const loadArticle = async (articleId) => {
-  try {
-    setLoading(true);
-    const data = await newsAPI.getArticle(articleId);
-    setArticle(data);
+  const loadArticle = async (articleId) => {
+    try {
+      setLoading(true);
+      const data = await newsAPI.getArticle(articleId);
+      setArticle(data);
 
-    // likes come directly from the article
-    setLikeCount(data.likes || 0);
-    setIsLiked(data.isLiked || false); // if backend sends it
-
-    setIsBookmarked(localStorage.getItem(`bookmark_${articleId}`) === 'true');
-  } catch (err) {
-    setError('Failed to load article');
-    console.error('Error loading article:', err);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-// Handle Like
-const handleLike = async () => {
-  try {
-    const res = await newsAPI.likeArticle(id);
-    if (res) {
-      setIsLiked(res.isLiked);
-      setLikeCount(res.likes);
+      console.log("data", data)
+      
+      // Fix: Extract the number of likes from the array length
+      setLikeCount(data.likes ? data.likes.length : 0);
+      
+      // Fix: Set view count from the article data
+      setViewCount(data.views || 0);
+      
+      // Check if current user has liked this article (you'll need to implement this based on your auth system)
+      // For now, we'll just set to false
+      setIsLiked(false);
+      
+      setIsBookmarked(localStorage.getItem(`bookmark_${articleId}`) === 'true');
+    } catch (err) {
+      setError('Failed to load article');
+      console.error('Error loading article:', err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Error liking article:", err);
-  }
-};
+  };
 
+  const handleLike = async () => {
+    try {
+      // Toggle like status
+      const newLikeStatus = !isLiked;
+      setIsLiked(newLikeStatus);
+      
+      // Update like count
+      setLikeCount(prev => newLikeStatus ? prev + 1 : prev - 1);
+      
+      // Call API to update like status
+      await newsAPI.likeArticle(id, newLikeStatus);
+    } catch (err) {
+      // Revert on error
+      setIsLiked(!isLiked);
+      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+      console.error("Error liking article:", err);
+    }
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -84,7 +95,7 @@ const handleLike = async () => {
 
   const toCloudinaryUrl = (url) => {
     if (!url) return '';
-    return url.startsWith('http') ? url : `https://res.cloudinary.com/drhfcappf/image/upload/${url}`;
+    return url.startsWith('http') ? url : `https://res.cloudinary.com/drhfcappf/imageUrl/upload/${url}`;
   };
 
   const handleShare = async (platform) => {
@@ -101,9 +112,9 @@ const handleLike = async () => {
       case 'copy':
         try {
           await navigator.clipboard.writeText(url);
-          // Show toast notification instead of alert
+          // Show toast notification
           const toast = document.createElement('div');
-          toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fadeIn';
+          toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
           toast.textContent = 'Link copied to clipboard!';
           document.body.appendChild(toast);
           setTimeout(() => {
@@ -121,18 +132,13 @@ const handleLike = async () => {
     localStorage.setItem(`bookmark_${id}`, !isBookmarked);
   };
 
-  // const handleLike = () => {
-  //   setIsLiked(!isLiked);
-  //   setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-  // };
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading article...</p>
@@ -143,8 +149,8 @@ const handleLike = async () => {
 
   if (error || !article) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
-        <div className="text-center animate-fadeInUp max-w-md mx-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
           <div className="bg-red-100 dark:bg-red-900/20 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -154,7 +160,7 @@ const handleLike = async () => {
           <p className="text-gray-600 dark:text-gray-300 mb-6">{error || 'The article you are looking for does not exist.'}</p>
           <Link
             to="/"
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-300 shadow-lg"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Home</span>
@@ -179,7 +185,7 @@ const handleLike = async () => {
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg z-40 hover:bg-blue-700 transition-all duration-300 transform hover:scale-110 animate-bounce"
+          className="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg z-40 hover:bg-blue-700 transition-all duration-300"
           aria-label="Scroll to top"
         >
           <ArrowUp className="h-5 w-5" />
@@ -192,9 +198,9 @@ const handleLike = async () => {
           <div className="flex items-center justify-between">
             <Link
               to="/"
-              className="inline-flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-all duration-300 transform hover:scale-105 group"
+              className="inline-flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-all duration-300"
             >
-              <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+              <ArrowLeft className="h-5 w-5" />
               <span>Back to Home</span>
             </Link>
             
@@ -230,7 +236,7 @@ const handleLike = async () => {
 
       {/* Article Content */}
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-colors duration-300 animate-fadeInUp border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-colors duration-300 border border-gray-200 dark:border-gray-700">
           {/* Article Header */}
           <div className="px-6 py-8 sm:px-8 sm:py-12">
             <div className="mb-6">
@@ -242,11 +248,11 @@ const handleLike = async () => {
               </span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6 leading-tight animate-fadeInUp animation-delay-200 tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6 leading-tight tracking-tight">
               {article.title}
             </h1>
             
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600 dark:text-gray-400 mb-6 animate-fadeInUp animation-delay-400 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600 dark:text-gray-400 mb-6 gap-4">
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4" />
@@ -268,21 +274,21 @@ const handleLike = async () => {
                 <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-full p-1">
                   <button
                     onClick={() => handleShare('facebook')}
-                    className="p-2 rounded-full text-blue-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110"
+                    className="p-2 rounded-full text-blue-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300"
                     title="Share on Facebook"
                   >
                     <Facebook className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleShare('twitter')}
-                    className="p-2 rounded-full text-blue-400 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110"
+                    className="p-2 rounded-full text-blue-400 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300"
                     title="Share on Twitter"
                   >
                     <Twitter className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleShare('copy')}
-                    className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110"
+                    className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300"
                     title="Copy Link"
                   >
                     <LinkIcon className="h-4 w-4" />
@@ -292,20 +298,20 @@ const handleLike = async () => {
             </div>
           </div>
 
-          {/* Article Image */}
-          <div className="px-6 sm:px-8 mb-8 animate-fadeInUp animation-delay-600">
+          {/* Article imageUrl */}
+          <div className="px-6 sm:px-8 mb-8">
             <div className="relative overflow-hidden rounded-2xl shadow-lg">
               <img
-                src={toCloudinaryUrl(article.imageUrl) || 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
+                src={toCloudinaryUrl(article.imageUrl) || 'https://imageUrls.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'}
                 alt={article.title}
-                className="w-full h-64 md:h-96 object-cover transform hover:scale-105 transition-transform duration-700"
+                className="w-full h-64 md:h-96 object-cover transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
             </div>
           </div>
 
           {/* Article Content */}
-          <div className="px-6 sm:px-8 pb-12 animate-fadeInUp animation-delay-800">
+          <div className="px-6 sm:px-8 pb-12">
             <div className="max-w-3xl mx-auto">
               <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-8 leading-relaxed font-light italic border-l-4 border-blue-500 pl-6 py-2">
                 {article.description}
@@ -361,10 +367,10 @@ const handleLike = async () => {
         </div>
 
         {/* Back to Home Button */}
-        <div className="mt-12 text-center animate-fadeInUp animation-delay-1000">
+        <div className="mt-12 text-center">
           <Link
             to="/"
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             <ArrowLeft className="h-5 w-5" />
             <span>Back to Home</span>
