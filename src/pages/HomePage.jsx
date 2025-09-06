@@ -108,7 +108,7 @@ const HomePage = () => {
               </h3>
               <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                 <Eye className="h-3 w-3 mr-1" />
-                <span>1.2k views</span>
+                <span>{article.views}</span>
                 <span className="mx-2">•</span>
                 <span>2 hours ago</span>
               </div>

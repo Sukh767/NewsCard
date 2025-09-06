@@ -2,30 +2,19 @@ import axios from "axios";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
+// Create axios instance with credentials enabled
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true, // This is crucial for cookie authentication
 });
-
-// Add auth token to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Handle response errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      // Redirect to login on authentication error
+      window.location.href = "/";
     }
     return Promise.reject(error);
   }
@@ -76,13 +65,11 @@ export const newsAPI = {
     await safeApiCall(() => api.delete(`/news/${id}`));
   },
 
-  // 🔹 Like an article
   likeArticle: async (id) => {
     const response = await safeApiCall(() => api.patch(`/news/${id}/like`));
     return response?.data || null;
   },
 
-  // 🔹 Unlike an article
   unlikeArticle: async (id) => {
     const response = await safeApiCall(() => api.patch(`/news/${id}/unlike`));
     return response?.data || null;
@@ -92,26 +79,18 @@ export const newsAPI = {
 export const authAPI = {
   login: async (email, password) => {
     const response = await safeApiCall(() => api.post("/users/login", { email, password }));
-    if (response?.data) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      return response.data.user;
-    }
-    return null;
+    console.log("login api call", response)
+    return response?.data || null;
   },
 
-  register: async (name, email, password) => {
-    const response = await safeApiCall(() => api.post("/users/register", { name, email, password }));
-    if (response?.data) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      return response.data.user;
-    }
-    return null;
+  register: async (userData) => {
+    const response = await safeApiCall(() => api.post("/users/register", userData));
+    return response?.data || null;
   },
 
   getProfile: async () => {
     const response = await safeApiCall(() => api.get("/users/profile"));
+    // console.log(response)
     return response?.data || null;
   },
 
@@ -119,6 +98,12 @@ export const authAPI = {
     const response = await safeApiCall(() =>
       api.put("/users/update", formData, { headers: { "Content-Type": "multipart/form-data" } })
     );
+    return response?.data || null;
+  },
+
+  logout: async () => {
+    const response = await safeApiCall(() => api.post("/users/logout"));
+    console.log(response)
     return response?.data || null;
   },
 };

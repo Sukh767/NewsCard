@@ -18,16 +18,17 @@ const router = express.Router();
 
 // 🔹 Normalize file handling into req.file
 const acceptImageUpload = [
-  upload.single("image"), // expect `image` field (common for news articles)
+  upload.single("imageUrl"), // 👈 expect `imageUrl` field from frontend
   (req, res, next) => {
     if (!req.file && req.files?.length > 0) {
-      // Fallback: take the first uploaded file if not under "image"
+      // Fallback: take the first uploaded file if not under "imageUrl"
       req.file = req.files[0];
     }
     console.log("Request file:", req.file?.originalname);
     next();
   },
 ];
+
 
 // ====================== ROUTES ======================
 router.get("/", getAllNews);
@@ -53,12 +54,12 @@ router.post(
 );
 
 // 🔹 Create news (with optional image upload)
-router.post("/", ...acceptImageUpload, createNews);
+router.post("/", ...acceptImageUpload,verifyJWT,authRole, createNews);
 
 // 🔹 Update news (with optional image upload)
-router.put("/:id", ...acceptImageUpload, updateNews);
+router.put("/:id", ...acceptImageUpload,verifyJWT,authRole, updateNews);
 
 // 🔹 Delete news
-router.delete("/:id", deleteNews);
+router.delete("/:id",verifyJWT,authRole, deleteNews);
 
 export default router;

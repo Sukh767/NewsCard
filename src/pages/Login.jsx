@@ -45,12 +45,14 @@ const Login = () => {
         </div>
         <div className="relative z-10 flex flex-col justify-center px-12 py-16 text-white">
           <div className="mb-8">
+            <Link to="/">
             <div className="flex items-center space-x-3 mb-6">
               <div className="bg-white text-blue-600 px-4 py-3 rounded-lg font-bold text-2xl">
                 News
               </div>
               <span className="text-3xl font-bold">Hub</span>
             </div>
+            </Link>
             <div className="w-16 h-1 bg-white rounded-full"></div>
           </div>
           <div className="space-y-6">
@@ -159,10 +161,10 @@ const Login = () => {
           <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6">
             <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Demo Admin Access</h3>
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              <span className="font-medium">Email:</span> demo@gmail.com
+              <span className="font-medium">Email:</span> tony@gmail.com
             </p>
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              <span className="font-medium">Password:</span> Demo@123
+              <span className="font-medium">Password:</span> Tony@123
             </p>
           </div>
         </div>

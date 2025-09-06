@@ -5,31 +5,34 @@ import User from "../models/User.js"
 
 
 const verifyJWT = asyncHandler(async (req, res, next) => {
-    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+  const token = req.cookies?.token; // 🔹 first from cookie
+  // console.log("token : ", token)
+  if (!token) {
+    return next(new ApiError(401, "Unauthorized"));
+  }
 
-    if (!token) {
-        return next(new ApiError(401, "Unauthorized"))
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    // console.log(decodedToken)
+
+    const user = await User.findById(decodedToken?.userId).select(
+      "-password"
+    );
+
+    // console.log(user)
+
+    if (!user) {
+      return next(new ApiError(401, "middleware : Unauthorized"));
     }
-    try {
-        // console.log("Access Token:", token);
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET)
-        // console.log("Verified token:", decodedToken)
 
-        const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
-        // console.log(user)
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error("JWT verification error:", err.message);
+    return next(new ApiError(401, err?.message || "Invalid access token"));
+  }
+});
 
-        if (!user) {
-            return next(new ApiError(401, "Unauthorized"))
-        }
-
-        req.user = user
-        next()
-    } catch (err) {
-        console.error("JWT verification error:", err.message);
-        return next( new ApiError(401, err?.message || "Invalid access token"))
-
-    }
-})
 
 const authRole = asyncHandler(async (req, res, next) => {
     if (req.user && req.user.isAdmin) {

@@ -11,34 +11,59 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check user
+    console.log(email,password)
+    // 🔹 Find user
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // Generate JWT token
+    // 🔹 Generate JWT token
     const token = generateToken(user._id, user.role);
 
+    // 🔹 Send token in HTTP-only cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // use secure only in production
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", 
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    // 🔹 Return response
     res.status(200).json({
       message: "Login successful",
       user: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
         role: user.role,
-        isAdmin: user.isAdmin,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar,
       },
-      token,
     });
   } catch (error) {
-    console.error("Error logging in user:", error);
-    res.status(500).json({ error: "Failed to log in user" });
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
+
+
+// Add a logout function that clears the cookie
+export const logoutUser = async (req, res) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",   // 🔹 Add this (must match login cookie path)
+    });
+
+    res.status(200).json({ message: "User logged out successfully" });
+  } catch (error) {
+    console.error("Error logging out user:", error);
+    res.status(500).json({ error: "Failed to log out user" });
+  }
+};
+
+
 
 // ====================== REGISTER ======================
 export const registerUser = async (req, res) => {
@@ -96,7 +121,11 @@ export const registerUser = async (req, res) => {
 // ====================== GET PROFILE ======================
 export const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-password");
+
+    const user = await User.findById(req.user?._id).select("-password");
+
+    console.log("controller",user)
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -180,7 +209,7 @@ export const updateProfile = async (req, res) => {
 };
 
 // ====================== LOGOUT ======================
-export const logoutUser = async (req, res) => {
+/*export const logoutUser = async (req, res) => {
   try {
     // Client should delete token
     res.status(200).json({ message: "User logged out successfully" });
@@ -189,7 +218,7 @@ export const logoutUser = async (req, res) => {
     res.status(500).json({ error: "Failed to log out user" });
   }
 };
-
+*/
 // ====================== CREATE USER ======================
 export const createUser = async (req, res) => {
   try {

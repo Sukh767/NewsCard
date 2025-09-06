@@ -122,14 +122,14 @@ export const createNews = async (req, res) => {
       return res.status(400).json({ message: "Invalid category." });
     }
 
-    // 🔹 Handle image (priority: imageUrl > file > default)
+    // 🔹 Handle imageUrl (priority: imageUrl > file > default)
     let imageUrlToSave = imageUrl?.trim();
     if (!imageUrlToSave && req.file) {
       console.log("Uploaded file for createNews:", req.file);
       imageUrlToSave = resolveCloudinaryUrl(req.file);
     }
     if (!imageUrlToSave) {
-      imageUrlToSave = "https://via.placeholder.com/600x400?text=Default+News+Image"; // 🔹 default fallback
+      imageUrlToSave = "https://via.placeholder.com/600x400?text=Default+News+imageUrl"; // 🔹 default fallback
     }
 
     // 🔹 Create news doc
@@ -154,6 +154,7 @@ export const createNews = async (req, res) => {
 export const updateNews = async (req, res) => {
   try {
     const { title, description, content, category, imageUrl } = req.body;
+    // console.log(req.body)
 
     // 🔹 Build update object only with provided fields
     const updateData = {};
@@ -162,14 +163,14 @@ export const updateNews = async (req, res) => {
     if (content) updateData.content = content.trim();
     if (category) updateData.category = category;
 
-    // 🔹 Handle image (priority: body imageUrl > file > default)
+    // 🔹 Handle imageUrl (priority: body imageUrl > file > default)
     if (imageUrl?.trim()) {
       updateData.imageUrl = imageUrl.trim();
     } else if (req.file) {
       console.log("Uploaded file for updateNews:", req.file);
       updateData.imageUrl = resolveCloudinaryUrl(req.file);
     } else {
-      updateData.imageUrl = "https://via.placeholder.com/600x400?text=Default+News+Image"; // 🔹 default fallback
+      updateData.imageUrl = "https://via.placeholder.com/600x400?text=Default+News+imageUrl"; // 🔹 default fallback
     }
 
     const updated = await News.findByIdAndUpdate(req.params.id, updateData, {
@@ -191,15 +192,22 @@ export const updateNews = async (req, res) => {
 // ------------------ LIKE NEWS ------------------
 export const likeNews = async (req, res) => {
   try {
-    const news = await News.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { likes: 1 } }, // increment likes
-      { new: true }
-    ).select("-__v");
+    const userId = req.user._id; // assuming auth middleware adds user
+    const news = await News.findById(req.params.id);
 
     if (!news) return res.status(404).json({ error: "News not found" });
 
-    res.json({ message: "News liked", likes: news.likes });
+    const index = news.likes.indexOf(userId);
+
+    if (index === -1) {
+      news.likes.push(userId); // like
+    } else {
+      news.likes.splice(index, 1); // unlike
+    }
+
+    await news.save();
+
+    res.json({ message: "Toggled like", likes: news.likes.length });
   } catch (error) {
     console.error("Error liking news:", error);
     res.status(500).json({ error: "Failed to like news" });
@@ -278,7 +286,7 @@ export const ingestNews = async (req, res) => {
         if (!title) continue;
         const description = a.description?.trim() || '';
         const content = a.content?.trim() || description;
-        const imageUrl = a.urlToImage || '';
+        const imageUrl = a.urlToimageUrl || '';
         const mapped = {
           title,
           description,

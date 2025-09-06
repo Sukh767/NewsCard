@@ -14,10 +14,11 @@ const Navbar = ({ onSearch, onCategoryFilter }) => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const isAdmin = user?.role === 'admin';
+  // const isAuthenticated = user?.role === 'admin';
+  console.log(isAuthenticated)
   const categories = ['Technology', 'Sports', 'Politics', 'Entertainment', 'Health', 'Business'];
 
   // Handle scroll behavior
@@ -183,7 +184,7 @@ const Navbar = ({ onSearch, onCategoryFilter }) => {
             {/* Auth Section */}
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
-                {isAdmin && (
+                {isAuthenticated && isAdmin &&(
                   <Link
                     to="/admin"
                     className={`text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 ${
@@ -384,7 +385,7 @@ const Navbar = ({ onSearch, onCategoryFilter }) => {
                 Your Profile
               </Link>
 
-              {isAdmin && (
+              {isAuthenticated && (
                 <Link
                   to="/admin"
                   className="block w-full text-center text-white px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 transition-all duration-300 mb-2"
