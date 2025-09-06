@@ -162,14 +162,15 @@ This project is for **learning purposes** and free to use.
 ## 📸 Screenshots
 
 ### 🔑 Authentication Pages
-![Login Page](./screenshots/login.png)
-![Register Page](./screenshots/register.png)
+![Login Page](screenshots/login.png)
+![Register Page](screenshots/register.png)
 
 ### 📰 Blog Pages
-![Homepage](./screenshots/homepage.png)
-![Single Blog](./screenshots/blog.png)
+![Homepage](screenshots/homepage.png)
+![Single Blog](screenshots/blog.png)
 
 ### 📊 Admin Dashboard
-![Admin Dashboard](./screenshots/dashboard.png)
+![Admin Dashboard](screenshots/dashboard.png)
+
 
 ```
