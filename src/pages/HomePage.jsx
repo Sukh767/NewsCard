@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, Star, ArrowRight, Heart, Share, Eye } from 'lucide-react';
+import { TrendingUp, Clock, Star, ArrowRight, Eye } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import NewsCard from '../components/NewsCard';
 import { newsAPI } from '../utils/api';
@@ -22,8 +22,7 @@ const HomePage = () => {
     try {
       setLoading(true);
       const data = await newsAPI.getAllNews({ category: selectedCategory, search: searchTerm });
-      console.log(data);
-      setArticles(data.news);
+      setArticles(data.news || []);
     } catch (err) {
       setError('Failed to load articles');
       console.error('Error loading articles:', err);
@@ -35,11 +34,10 @@ const HomePage = () => {
   const loadTrendingArticles = async () => {
     try {
       setTrendingLoading(true);
-      // Simulate trending articles - in a real app, you'd have an API endpoint for this
       const data = await newsAPI.getAllNews({});
-      // Filter or sort to get trending articles (by views, likes, date, etc.)
-      const trending = data.news
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      // Sort by views or date to get trending articles
+      const trending = (data.news || [])
+        .sort((a, b) => (b.views || 0) - (a.views || 0))
         .slice(0, 4);
       setTrendingArticles(trending);
     } catch (err) {
@@ -62,8 +60,18 @@ const HomePage = () => {
     return url.startsWith('http') ? url : `https://res.cloudinary.com/drhfcappf/image/upload/${url}`;
   };
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    return `${Math.floor(diffInHours / 24)} days ago`;
+  };
+
   const TrendingNewsSection = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-md p-6 mb-12 animate-fadeInUp">
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-12 shadow-md">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
           <TrendingUp className="h-6 w-6 mr-2 text-red-500" />
@@ -87,16 +95,16 @@ const HomePage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trendingArticles.map((article, index) => (
+          {trendingArticles.map((article) => (
             <div 
               key={article._id} 
-              className="group cursor-pointer transform hover:scale-105 transition-transform duration-300"
+              className="group cursor-pointer"
             >
               <div className="relative overflow-hidden rounded-lg mb-3">
                 <img 
                   src={toCloudinaryUrl(article.imageUrl) || '/api/placeholder/300/200'} 
                   alt={article.title}
-                  className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                  className="w-full h-48 object-cover"
                 />
                 <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
                   Trending
@@ -108,9 +116,9 @@ const HomePage = () => {
               </h3>
               <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                 <Eye className="h-3 w-3 mr-1" />
-                <span>{article.views}</span>
+                <span>{article.views || 0}</span>
                 <span className="mx-2">•</span>
-                <span>2 hours ago</span>
+                <span>{formatDate(article.createdAt)}</span>
               </div>
             </div>
           ))}
@@ -217,7 +225,7 @@ const HomePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Navbar onSearch={handleSearch} onCategoryFilter={handleCategoryFilter} />
         <div className="flex items-center justify-center min-h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
@@ -228,15 +236,15 @@ const HomePage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Navbar onSearch={handleSearch} onCategoryFilter={handleCategoryFilter} />
         <div className="flex items-center justify-center min-h-96">
-          <div className="text-center animate-fadeInUp">
+          <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Something went wrong</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
             <button
               onClick={loadArticles}
-              className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300 transform hover:scale-105"
+              className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
               Try Again
             </button>
@@ -247,32 +255,56 @@ const HomePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar onSearch={handleSearch} onCategoryFilter={handleCategoryFilter} />
       
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white py-16 animate-fadeIn">
+      {/* Enhanced Hero Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-fadeInUp">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Stay Informed with NewsHub
             </h1>
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 animate-fadeInUp animation-delay-200">
-              Your trusted source for breaking news and in-depth analysis
+            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
+              Discover breaking news, insightful analysis, and trending stories from around the globe. 
+              Your trusted source for accurate and timely information.
             </p>
-            <div className="flex items-center justify-center space-x-8 text-sm animate-fadeInUp animation-delay-400">
-              <div className="flex items-center space-x-2 transform hover:scale-105 transition-transform duration-300">
-                <TrendingUp className="h-5 w-5" />
-                <span>Trending Stories</span>
+            
+            {/* Enhanced Stats Section */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <TrendingUp className="h-8 w-8 text-yellow-300" />
+                    <span className="text-3xl font-bold">500+</span>
+                  </div>
+                  <p className="text-blue-100">Daily Articles</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <Clock className="h-8 w-8 text-green-300" />
+                    <span className="text-3xl font-bold">24/7</span>
+                  </div>
+                  <p className="text-blue-100">Real-time Updates</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <Star className="h-8 w-8 text-red-300" />
+                    <span className="text-3xl font-bold">50+</span>
+                  </div>
+                  <p className="text-blue-100">Expert Journalists</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2 transform hover:scale-105 transition-transform duration-300">
-                <Clock className="h-5 w-5" />
-                <span>Real-time Updates</span>
-              </div>
-              <div className="flex items-center space-x-2 transform hover:scale-105 transition-transform duration-300">
-                <Star className="h-5 w-5" />
-                <span>Quality Journalism</span>
-              </div>
+            </div>
+            
+            {/* Call to Action */}
+            <div className="mt-8">
+              <p className="text-blue-100 mb-4">Join thousands of informed readers today</p>
+              <button className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors shadow-lg">
+                Start Reading Now
+              </button>
             </div>
           </div>
         </div>
@@ -284,7 +316,7 @@ const HomePage = () => {
         <TrendingNewsSection />
 
         {/* Filter Header */}
-        <div className="mb-8 animate-fadeInUp">
+        <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
             {selectedCategory ? `${selectedCategory} News` : 'Latest News'}
             {searchTerm && (
@@ -293,23 +325,33 @@ const HomePage = () => {
           </h2>
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
             <span>{articles.length} articles found</span>
+            {(searchTerm || selectedCategory) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('');
+                }}
+                className="ml-4 text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
 
         {/* Articles Grid */}
         {articles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {articles.map((article, index) => (
-              <div key={article._id} style={{ animationDelay: `${index * 100}ms` }}>
-                <NewsCard 
-                  article={article} 
-                  featured={index === 0}
-                />
-              </div>
+            {articles.map((article) => (
+              <NewsCard 
+                key={article._id}
+                article={article} 
+                featured={false}
+              />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 animate-fadeInUp">
+          <div className="text-center py-16">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               No articles found
             </h3>
@@ -325,7 +367,7 @@ const HomePage = () => {
                   setSearchTerm('');
                   setSelectedCategory('');
                 }}
-                className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300 transform hover:scale-105"
+                className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
               >
                 Clear Filters
               </button>
