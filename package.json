@@ -13,7 +13,6 @@
     "start": "concurrently \"npm run dev\" \"npm run server:dev\" --names \"Frontend,Backend\" --prefix-colors \"cyan,yellow\""
   },
   "dependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.50.0",
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
@@ -28,8 +27,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^6.22.0",
-    "rollup": "^4.50.0"
+    "react-router-dom": "^6.22.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
@@ -44,6 +42,7 @@
     "globals": "^15.9.0",
     "nodemon": "^3.0.3",
     "postcss": "^8.4.35",
+    "rollup": "^4.50.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
