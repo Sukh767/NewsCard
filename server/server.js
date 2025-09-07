@@ -23,7 +23,7 @@ const __dirname = dirname(__filename);
 // ✅ CORS setup (important for cookies + frontend requests)
 app.use(
   cors({
-    origin: "http://localhost:5173", // React frontend
+    origin: "https://newscard-backend-xwhi.onrender.com", // React frontend
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
