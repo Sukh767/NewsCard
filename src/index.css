@@ -171,3 +171,9 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400 dark:bg-gray-500;
 }
+
+
+select option {
+  background-color: #ffffff; /* White background for options */
+  color: #955cf0; /* Dark text color for options */
+}

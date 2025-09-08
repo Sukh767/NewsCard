@@ -10,7 +10,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalArticles: 0,
     totalViews: 0,
-    totalUsers: 0,
+    totalUsers: 2,
     articlesThisMonth: 0,
   });
 
@@ -36,7 +36,7 @@ const AdminDashboard = () => {
       setStats({
         totalArticles: articlesData.length,
         totalViews: Math.floor(Math.random() * 10000) + 1000, // Mock data
-        totalUsers: Math.floor(Math.random() * 500) + 50, // Mock data
+        totalUsers: Math.floor(Math.random() * 50) + 50, // Mock data
         articlesThisMonth: thisMonth.length,
       });
     } catch (error) {

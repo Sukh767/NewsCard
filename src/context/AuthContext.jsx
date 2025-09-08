@@ -1,122 +1,147 @@
+// src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
 import { authAPI } from "../utils/api";
 
 const AuthContext = createContext();
 
-// ✅ Configure axios to always send cookies
-axios.defaults.withCredentials = true;
-axios.defaults.baseURL = "http://localhost:5000/api";
+const normalizeResponse = (res) => {
+  // Accept either axios response (res.data) or a direct payload
+  if (!res) return null;
+  if (res.data) return res.data;
+  return res;
+};
+
+const isLikelyUserObject = (obj) => {
+  if (!obj || typeof obj !== "object") return false;
+  return !!(obj._id || obj.id || obj.email || obj.username);
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 🔹 On app load → restore from localStorage
+  // Restore from localStorage once on app start
   useEffect(() => {
-    checkAuthStatus();
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (isLikelyUserObject(parsed)) {
+          setUser(parsed);
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem("user");
+        }
+      }
+    } catch (err) {
+      console.error("Auth restore error:", err);
+      localStorage.removeItem("user");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // expose a function to explicitly re-check storage (optional)
   const checkAuthStatus = () => {
     try {
-      const storedUser = localStorage.getItem("user");
-      const storedToken = localStorage.getItem("token");
-
-      if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser));
-        setIsAuthenticated(true);
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (isLikelyUserObject(parsed)) {
+          setUser(parsed);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem("user");
+        }
       } else {
         setUser(null);
         setIsAuthenticated(false);
       }
     } catch (err) {
-      console.error("Error restoring auth state:", err);
+      console.error("checkAuthStatus error:", err);
       setUser(null);
       setIsAuthenticated(false);
-    } finally {
-      setLoading(false);
+      localStorage.removeItem("user");
     }
   };
 
-  // 🔹 Login
+  // Login: use authAPI.login (but be tolerant of response shape)
   const login = async (email, password) => {
     try {
-      const res = await authAPI.login(email, password);
+      const raw = await authAPI.login(email, password); // may be axios response or payload
+      const payload = normalizeResponse(raw);
 
-      if (res?.user) {
-        setUser(res.user);
+      // payload might be: { message, user } or { user } or user object
+      const userData = payload?.user ?? payload;
+
+      if (isLikelyUserObject(userData)) {
+        setUser(userData);
         setIsAuthenticated(true);
-        console.log(isAuthenticated)
+        localStorage.setItem("user", JSON.stringify(userData));
 
-        // ✅ Persist in localStorage
-        localStorage.setItem("user", JSON.stringify(res.user));
-        localStorage.setItem("token", res.token);
+        // persist token if backend returned it
+        if (payload?.token) {
+          localStorage.setItem("token", payload.token);
+        }
 
-        return { success: true, user: res.user };
+        return { success: true, user: userData };
       }
+
       return { success: false, message: "Invalid server response" };
     } catch (err) {
-      console.error("Login failed:", err.response?.data || err.message);
+      console.error("Login failed:", err?.response?.data || err?.message || err);
       return {
         success: false,
         message:
-          err.response?.data?.error ||
-          err.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          err?.message ||
           "Login failed",
       };
     }
   };
 
-  // 🔹 Register
-  const register = async (name, email, password) => {
+  // Register: similar normalization (uses authAPI if you have it)
+  const register = async (payloadData) => {
     try {
-      const res = await axios.post("/users/register", {
-        username: name, // ✅ matches schema
-        email,
-        password,
-      });
+      // Use authAPI.register if you have one, otherwise fallback to fetch via authAPI or axios
+      const raw = await (authAPI.register ? authAPI.register(payloadData) : Promise.resolve(null));
+      const payload = normalizeResponse(raw);
+      const userData = payload?.user ?? payload;
 
-      if (res.data?.user && res.data?.token) {
-        setUser(res.data.user);
+      if (isLikelyUserObject(userData)) {
+        setUser(userData);
         setIsAuthenticated(true);
-
-        // ✅ Persist in localStorage
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        localStorage.setItem("token", res.data.token);
-
-        return { success: true, user: res.data.user };
+        localStorage.setItem("user", JSON.stringify(userData));
+        if (payload?.token) localStorage.setItem("token", payload.token);
+        return { success: true, user: userData };
       }
+
       return { success: false, message: "Invalid server response" };
     } catch (err) {
-      console.error("Registration failed:", err.response?.data || err.message);
-      return {
-        success: false,
-        message:
-          err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Registration failed",
-      };
+      console.error("Register failed:", err?.response?.data || err?.message || err);
+      return { success: false, message: err?.message || "Registration failed" };
     }
   };
 
-  // 🔹 Logout
+  // Logout
   const logout = async () => {
     try {
-      await authAPI.logout();
+      if (authAPI.logout) await authAPI.logout();
     } catch (err) {
-      console.error("Logout failed:", err.response?.data || err.message);
+      console.error("Logout request failed:", err?.response?.data || err?.message || err);
     } finally {
-      // ✅ Clear localStorage
+      // Always clear local auth state
       localStorage.removeItem("user");
       localStorage.removeItem("token");
-
       setUser(null);
       setIsAuthenticated(false);
     }
   };
 
-  // Helpers
   const isAdmin = user?.role === "admin" || user?.isAdmin === true;
   const role = user?.role;
 
@@ -127,7 +152,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        loading,
+        loading, // important for route guards
         isAuthenticated,
         isAdmin,
         role,
@@ -139,5 +164,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ Custom hook
 export const useAuth = () => useContext(AuthContext);
