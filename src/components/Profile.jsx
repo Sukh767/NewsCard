@@ -66,7 +66,7 @@ export const Profile = () => {
             username: userData.username || "",
             lastName: userData.lastName || "",
             email: userData.email || "",
-            username: userData.username || "",
+            // username: userData.username || "",
             avatar: null,
             password: "",
             confirmPassword: ""

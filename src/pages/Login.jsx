@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Newspaper, TrendingUp, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -20,7 +21,9 @@ const Login = () => {
     try {
       const success = await login(email, password);
       if (success) {
+        toast.success("Login successful")
         navigate('/');
+
       } else {
         setError('Invalid email or password');
       }

@@ -192,8 +192,9 @@ export const updateNews = async (req, res) => {
 // ------------------ LIKE NEWS ------------------
 export const likeNews = async (req, res) => {
   try {
-    const userId = req.user._id; // assuming auth middleware adds user
+    const userId = req.user?._id;
     const news = await News.findById(req.params.id);
+    // console.log("like controll hit", userId)
 
     if (!news) return res.status(404).json({ error: "News not found" });
 

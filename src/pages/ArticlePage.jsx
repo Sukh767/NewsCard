@@ -5,6 +5,7 @@ import {
   Clock, Eye, Heart, MessageCircle, Bookmark, Tag, ArrowUp
 } from 'lucide-react';
 import { newsAPI } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const ArticlePage = () => {
   const { id } = useParams();
@@ -37,7 +38,7 @@ const ArticlePage = () => {
       const data = await newsAPI.getArticle(articleId);
       setArticle(data);
 
-      console.log("data", data)
+      // console.log("data", data)
       
       // Fix: Extract the number of likes from the array length
       setLikeCount(data.likes ? data.likes.length : 0);
@@ -69,6 +70,7 @@ const ArticlePage = () => {
       
       // Call API to update like status
       await newsAPI.likeArticle(id, newLikeStatus);
+      toast.success("❤️");
     } catch (err) {
       // Revert on error
       setIsLiked(!isLiked);

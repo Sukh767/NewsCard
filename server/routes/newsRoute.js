@@ -36,8 +36,8 @@ router.get("/featured", getFeaturedNews);
 router.get("/categories", getCategories);
 router.get("/:id", getSingleNews);
 
-router.patch("/:id/like", likeNews);
-router.patch("/:id/unlike", unlikeNews);
+router.patch("/:id/like",verifyJWT, likeNews);
+router.patch("/:id/unlike",verifyJWT, unlikeNews);
 
 // 🔹 Admin-only ingest route
 router.post(

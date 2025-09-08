@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, User, LogOut, UserPlus, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import toast from 'react-hot-toast';
 
 const Navbar = ({ onSearch, onCategoryFilter }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -55,6 +56,7 @@ const Navbar = ({ onSearch, onCategoryFilter }) => {
 
   const handleLogout = () => {
     logout();
+    toast.success("Logout successful")
     navigate('/');
     setIsProfileMenuOpen(false);
     setIsMenuOpen(false);
