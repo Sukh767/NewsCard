@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api";
+// const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://newscard-backend-xwhi.onrender.com
 
 // Create axios instance with credentials enabled
 const api = axios.create({
