@@ -6,7 +6,7 @@ import { Home, User, Mail, UserCheck, Save, Camera, Edit, Lock, Eye, EyeOff } fr
 
 export const Profile = () => {
   const [formData, setFormData] = useState({
-    username: "",
+    firstname: "",
     // lastName: "",
     email: "",
     username: "",
@@ -147,65 +147,76 @@ export const Profile = () => {
     }
   };
 
-  // Update profile
-  const handleUpdate = async (e) => {
-    e.preventDefault();
 
-    // Validate passwords if they are being changed
+// Update profile
+const handleUpdate = async (e) => {
+  e.preventDefault();
+
+  // Validate passwords if they are being changed
+  if (formData.password) {
+    const errors = validatePassword(formData.password);
+    
+    if (errors.length > 0) {
+      setPasswordErrors(errors);
+      toast.error("Please fix password validation errors");
+      return;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      setPasswordErrors(["Passwords do not match"]);
+      toast.error("Passwords do not match");
+      return;
+    }
+  }
+
+  try {
+    setLoading(true);
+
+    const data = new FormData();
+    
+    // Only append fields that have changed
+    if (formData.username !== originalData.username) {
+      data.append("username", formData.username);
+    }
+    if (formData.lastName !== originalData.lastName) {
+      data.append("lastName", formData.lastName);
+    }
+    if (formData.email !== originalData.email) {
+      data.append("email", formData.email);
+    }
+    if (formData.avatar) {
+      data.append("avatar", formData.avatar);
+    }
+    // Only append password if it's been changed
     if (formData.password) {
-      const errors = validatePassword(formData.password);
-      
-      if (errors.length > 0) {
-        setPasswordErrors(errors);
-        toast.error("Please fix password validation errors");
-        return;
-      }
-      
-      if (formData.password !== formData.confirmPassword) {
-        setPasswordErrors(["Passwords do not match"]);
-        toast.error("Passwords do not match");
-        return;
-      }
+      data.append("password", formData.password);
     }
 
-    try {
-      setLoading(true);
+    console.log("FormData contents:");
+    for (let [key, value] of data.entries()) {
+      console.log(key, value);
+    }
 
-      const data = new FormData();
+    // Check if there are any changes
+    let hasChanges = false;
+    for (let entry of data.entries()) {
+      hasChanges = true;
+      break;
+    }
+
+    if (!hasChanges) {
+      toast.error("No changes to save");
+      setIsEditing(false);
+      return;
+    }
+
+    const res = await authAPI.updateProfile(data);
+    console.log("Update response:", res);
+
+    if (res && res.user) {
+      // Update user in localStorage
+      localStorage.setItem("user", JSON.stringify(res.user));
       
-      // Only append fields that have changed
-      if (formData.username !== originalData.username) {
-        data.append("username", formData.username);
-      }
-      if (formData.lastName !== originalData.lastName) {
-        data.append("lastName", formData.lastName);
-      }
-      if (formData.username !== originalData.username) {
-        data.append("username", formData.username);
-      }
-      if (formData.avatar) {
-        data.append("avatar", formData.avatar);
-      }
-      // Only append password if it's been changed
-      if (formData.password) {
-        data.append("password", formData.password);
-      }
-
-      console.log("FormData contents:");
-      for (let [key, value] of data.entries()) {
-        console.log(key, value);
-      }
-
-      // Check if there are any changes
-      if (data.entries().next().done) {
-        toast.error("No changes to save");
-        setIsEditing(false);
-        return;
-      }
-
-      const res = await authAPI.updateProfile(data);
-      console.log("Update response:", res);
-
       toast.success("Profile updated successfully!");
       setIsEditing(false);
       
@@ -225,24 +236,27 @@ export const Profile = () => {
       }));
       
       setPasswordErrors([]);
-    } catch (error) {
-      console.error("Update error details:", error);
-      
-      if (error.response) {
-        if (error.response.status === 500) {
-          toast.error("Server error. Please check the console for details.");
-        } else {
-          toast.error(error.response.data?.message || `Error: ${error.response.status}`);
-        }
-      } else if (error.request) {
-        toast.error("Network error. Please check your connection.");
-      } else {
-        toast.error(error.message || "Profile update failed");
-      }
-    } finally {
-      setLoading(false);
+    } else {
+      throw new Error("Invalid response from server");
     }
-  };
+  } catch (error) {
+    console.error("Update error details:", error);
+    
+    if (error.response) {
+      if (error.response.status === 500) {
+        toast.error("Server error. Please check the console for details.");
+      } else {
+        toast.error(error.response.data?.error || `Error: ${error.response.status}`);
+      }
+    } else if (error.request) {
+      toast.error("Network error. Please check your connection.");
+    } else {
+      toast.error(error.message || "Profile update failed");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const changeEdit = () => {
     setIsEditing(true);

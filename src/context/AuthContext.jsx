@@ -1,6 +1,7 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { authAPI } from "../utils/api";
+import axios from "axios";
 
 const AuthContext = createContext();
 
@@ -105,27 +106,27 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register: similar normalization (uses authAPI if you have it)
-  const register = async (payloadData) => {
-    try {
-      // Use authAPI.register if you have one, otherwise fallback to fetch via authAPI or axios
-      const raw = await (authAPI.register ? authAPI.register(payloadData) : Promise.resolve(null));
-      const payload = normalizeResponse(raw);
-      const userData = payload?.user ?? payload;
+const register = async (payloadData) => {
+  try {
+    // Use your authAPI.register function
+    const raw = await authAPI.register(payloadData);
+    const payload = normalizeResponse(raw);
+    const userData = payload?.user ?? payload;
 
-      if (isLikelyUserObject(userData)) {
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem("user", JSON.stringify(userData));
-        if (payload?.token) localStorage.setItem("token", payload.token);
-        return { success: true, user: userData };
-      }
-
-      return { success: false, message: "Invalid server response" };
-    } catch (err) {
-      console.error("Register failed:", err?.response?.data || err?.message || err);
-      return { success: false, message: err?.message || "Registration failed" };
+    if (isLikelyUserObject(userData)) {
+      setUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem("user", JSON.stringify(userData));
+      if (payload?.token) localStorage.setItem("token", payload.token);
+      return true;
     }
-  };
+
+    throw new Error("Invalid server response");
+  } catch (err) {
+    console.error("Register failed:", err?.response?.data || err?.message || err);
+    throw new Error(err?.response?.data?.error || err?.message || "Registration failed");
+  }
+};
 
   // Logout
   const logout = async () => {

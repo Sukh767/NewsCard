@@ -1,3 +1,4 @@
+import { uploadOnCloudinary } from "../middleware/uploadCloudinary.js";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 
@@ -75,10 +76,17 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ error: "Email, username, and password are required." });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists by email or username
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { username }] 
+    });
+    
     if (existingUser) {
-      return res.status(400).json({ error: "User already exists with this email." });
+      if (existingUser.email === email) {
+        return res.status(400).json({ error: "User already exists with this email." });
+      } else {
+        return res.status(400).json({ error: "Username is already taken." });
+      }
     }
 
     // Create new user
@@ -86,11 +94,11 @@ export const registerUser = async (req, res) => {
       username,
       email,
       password,
-      firstName,
-      lastName,
-      avatar,
-      role: role || "user",      // fallback to default
-      isAdmin: isAdmin || false, // fallback to default
+      firstName: firstName || '',
+      lastName: lastName || '',
+      avatar: avatar || '',
+      role: role || "user",
+      isAdmin: isAdmin || false,
     });
 
     await newUser.save();
@@ -175,21 +183,45 @@ export const deleteUser = async (req, res) => {
 // ====================== UPDATE PROFILE ======================
 export const updateProfile = async (req, res) => {
   try {
-    const { username, email, password, firstName, lastName, avatar } = req.body;
-
-    const user = await User.findById(req.user.userId);
+    const { username, email, password, firstName, lastName } = req.body;
+    
+    const user = await User.findById(req.user._id);
+    console.log("Updating user:", req.user);
+    
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Handle avatar upload if file is present
+    let avatarUrl = user.avatar; // Keep existing avatar by default
+    
+    if (req.file) {
+      try {
+        // Upload to Cloudinary
+        const cloudinaryResponse = await uploadOnCloudinary(req.file.path);
+        
+        if (cloudinaryResponse && cloudinaryResponse.url) {
+          avatarUrl = cloudinaryResponse.url;
+          console.log("Avatar uploaded to Cloudinary:", avatarUrl);
+        } else {
+          console.error("Cloudinary upload failed");
+          return res.status(500).json({ error: "Failed to upload avatar" });
+        }
+      } catch (uploadError) {
+        console.error("Error uploading to Cloudinary:", uploadError);
+        return res.status(500).json({ error: "Failed to upload avatar" });
+      }
+    }
+
+    // Update user fields
     if (username) user.username = username;
     if (email) user.email = email;
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
-    if (avatar) user.avatar = avatar;
+    if (avatarUrl) user.avatar = avatarUrl;
 
-    // only update password if new one is provided
-    if (password && !(await user.comparePassword(password))) {
+    // Only update password if new one is provided
+    if (password) {
       user.password = password;
     }
 
@@ -207,7 +239,6 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ error: "Failed to update profile" });
   }
 };
-
 // ====================== LOGOUT ======================
 /*export const logoutUser = async (req, res) => {
   try {
