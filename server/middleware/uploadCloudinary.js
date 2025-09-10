@@ -13,7 +13,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (path) => {
+export const uploadOnCloudinary = async (path) => {
     try {
         if (!path) return null
         const response = await cloudinary.uploader.upload(path, { resource_type: "auto", folder: "/NewsCard" })
@@ -28,4 +28,3 @@ const uploadOnCloudinary = async (path) => {
     }
 }
 
-export { uploadOnCloudinary }

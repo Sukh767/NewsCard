@@ -1,12 +1,12 @@
 import axios from "axios";
 
-// const API_BASE_URL = "http://localhost:5000/api";
-const API_BASE_URL = "https://newscard-backend-xwhi.onrender.com";
+const API_BASE_URL = "http://localhost:5000/api";
+// const API_BASE_URL = "https://newscard-backend-xwhi.onrender.com";
 
 // Create axios instance with credentials enabled
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // This is crucial for cookie authentication
+  withCredentials: true,
 });
 
 // Handle response errors
@@ -26,6 +26,7 @@ const safeApiCall = async (apiCall) => {
   try {
     return await apiCall();
   } catch (error) {
+    // console.log(error)
     console.error("API error:", error.response?.data || error.message);
     return null;
   }
@@ -90,17 +91,23 @@ export const authAPI = {
   },
 
   getProfile: async () => {
-    const response = await safeApiCall(() => api.get("/users/profile"));
-    // console.log(response)
-    return response?.data || null;
-  },
-
-  updateProfile: async (formData) => {
     const response = await safeApiCall(() =>
-      api.put("/users/update", formData, { headers: { "Content-Type": "multipart/form-data" } })
+      api.get("/users/profile")
     );
     return response?.data || null;
   },
+
+// In your api.js or authAPI file
+updateProfile: async (formData) => {
+  const response = await safeApiCall(() =>
+    api.put("/users/update", formData, { 
+      headers: { 
+        "Content-Type": "multipart/form-data" 
+      } 
+    })
+  );
+  return response?.data || null;
+},
 
   logout: async () => {
     const response = await safeApiCall(() => api.post("/users/logout"));

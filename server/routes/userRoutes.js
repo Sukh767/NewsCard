@@ -10,6 +10,7 @@ import {
   deleteUser,
   logoutUser,
 } from "../controllers/userController.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.post("/logout", verifyJWT, logoutUser);
 
 // Profile routes
 router.get("/profile", verifyJWT, getUserProfile);
-router.put("/update", verifyJWT, updateProfile);
+router.put("/update", verifyJWT, upload.single("avatar"), updateProfile);
 
 // Admin-only routes
 router.get("/", verifyJWT, authRole, getAllUsers);
